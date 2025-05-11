@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { saveToLocalStorage, loadFromLocalStorage } from "@/utils/storage";
 
 const AudioContextClass =
   typeof window.AudioContext !== "undefined"
@@ -60,10 +61,9 @@ export default function TriadTuner() {
     {} as Record<string, boolean>
   );
 
-  const [detuneCents, setDetuneCents] = useState<Record<string, number>>(() => {
-    const saved = localStorage.getItem("detuneCents");
-    return saved ? JSON.parse(saved) : initialDetunes;
-  });
+  const [detuneCents, setDetuneCents] = useState<Record<string, number>>(() =>
+    loadFromLocalStorage("detuneCents", initialDetunes)
+  );
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeNotes, setActiveNotes] = useState(initialActives);
@@ -90,7 +90,7 @@ export default function TriadTuner() {
   };
 
   useEffect(() => {
-    localStorage.setItem("detuneCents", JSON.stringify(detuneCents));
+    saveToLocalStorage("detuneCents", detuneCents);
   }, [detuneCents]);
 
   useEffect(() => {
