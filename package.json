@@ -6,7 +6,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "gh-pages -d dist"
+    "deploy": "npm run build && gh-pages -d dist -r https://github.com/szabyg/triad-tuner.git"
   },
   "dependencies": {
     "@radix-ui/react-slider": "^1.3.4",

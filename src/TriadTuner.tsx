@@ -199,9 +199,9 @@ export default function TriadTuner() {
                     {note} / {note}' : {detuneCents[note]} cents
                 </label>
                 <Slider
-                  min={-50}
-                  max={50}
-                  step={1}
+                  min={-50.0}
+                  max={50.0}
+                  step={0.1}
                   value={[detuneCents[note]]}
                   onValueChange={([val]) => setDetuneCents((prev) => ({ ...prev, [note]: val }))}
                 />
@@ -219,3 +219,4 @@ export default function TriadTuner() {
       </div>
     );
 }
+
