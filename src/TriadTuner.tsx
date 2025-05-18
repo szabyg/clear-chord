@@ -114,6 +114,12 @@ export default function TriadTuner() {
         <div className="flex items-end gap-2">
           <Button onClick={applyChord}>Apply Chord</Button>
           <Button onClick={resetPitches}>Reset Pitches</Button>
+          <Button onClick={() => setIsPlaying(true)} disabled={isPlaying}>
+            Play
+          </Button>
+          <Button onClick={() => setIsPlaying(false)} disabled={!isPlaying}>
+            Stop
+          </Button>
         </div>
       </div>
 
@@ -136,15 +142,6 @@ export default function TriadTuner() {
           />
         </div>
       ))}
-
-      <div className="space-x-4">
-        <Button onClick={() => setIsPlaying(true)} disabled={isPlaying}>
-          Play
-        </Button>
-        <Button onClick={() => setIsPlaying(false)} disabled={!isPlaying}>
-          Stop
-        </Button>
-      </div>
     </div>
   );
 }
