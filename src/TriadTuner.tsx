@@ -1,13 +1,13 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { saveToLocalStorage, loadFromLocalStorage } from "@/utils/storage";
-
-const AudioContextClass =
-  typeof window.AudioContext !== "undefined"
-    ? window.AudioContext
-    : (window as any).webkitAudioContext;
-const audioCtx = new AudioContextClass();
+import { useLocalStorageState } from "@/hooks/useLocalStorageState";
+import { useOscillators } from "@/hooks/useOscillators";
+import {
+  initializeDetuneCents,
+  initializeActiveNotes,
+  applyChordLogic,
+} from "@/utils/noteUtils";
 
 const CHORD_TYPES: Record<string, number[]> = {
   Dur: [0, 4, 7],
@@ -32,57 +32,24 @@ const NOTE_NAMES = [
 
 const NOTES = NOTE_NAMES.concat(NOTE_NAMES.map((n) => n + "'")).flat();
 
-const BASE_FREQUENCIES: Record<string, number> = NOTES.reduce(
-  (acc, note, i) => {
-    acc[note] = 130.81 * Math.pow(2, i / 12); // start from lower C
-    return acc;
-  },
-  {} as Record<string, number>
-);
-
-function detuneFrequency(baseFreq: number, cents: number): number {
-  return baseFreq * Math.pow(2, cents / 1200);
-}
-
 export default function TriadTuner() {
-  const initialDetunes = NOTE_NAMES.reduce(
-    (acc, note) => {
-      acc[note] = 0;
-      return acc;
-    },
-    {} as Record<string, number>
-  );
+  const initialDetunes = initializeDetuneCents(NOTE_NAMES);
+  const initialActives = initializeActiveNotes(NOTES);
 
-  const initialActives = NOTES.reduce(
-    (acc, note) => {
-      acc[note] = false;
-      return acc;
-    },
-    {} as Record<string, boolean>
+  const [detuneCents, setDetuneCents] = useLocalStorageState(
+    "detuneCents",
+    initialDetunes
   );
-
-  const [detuneCents, setDetuneCents] = useState<Record<string, number>>(() =>
-    loadFromLocalStorage("detuneCents", initialDetunes)
-  );
-
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeNotes, setActiveNotes] = useState(initialActives);
-  const [waveform, setWaveform] = useState("sine");
   const [rootNote, setRootNote] = useState("C");
   const [chordType, setChordType] = useState("Dur");
-  const oscillatorsRef = useRef<Record<string, any>>({});
+
+  const { startOscillators, stopOscillators, updateOscillators } =
+    useOscillators(isPlaying, activeNotes, detuneCents);
 
   const applyChord = () => {
-    const intervals = CHORD_TYPES[chordType];
-    const rootIndex = NOTE_NAMES.indexOf(rootNote);
-    const updated: Record<string, boolean> = {};
-    NOTES.forEach((n) => (updated[n] = false));
-    intervals.forEach((offset) => {
-      const note = NOTE_NAMES[(rootIndex + offset) % 12];
-      updated[note] = true;
-      updated[note + "'"] = true;
-    });
-    setActiveNotes(updated);
+    setActiveNotes(applyChordLogic(rootNote, chordType, NOTE_NAMES, NOTES));
   };
 
   const resetPitches = () => {
@@ -90,73 +57,18 @@ export default function TriadTuner() {
   };
 
   useEffect(() => {
-    saveToLocalStorage("detuneCents", detuneCents);
-  }, [detuneCents]);
-
-  useEffect(() => {
     if (isPlaying) {
-      NOTES.forEach((note) => {
-        if (!activeNotes[note]) return;
-        const baseNote = note.replace("'", "");
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = waveform;
-        osc.frequency.setValueAtTime(
-          detuneFrequency(BASE_FREQUENCIES[note], detuneCents[baseNote]),
-          audioCtx.currentTime
-        );
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        oscillatorsRef.current[note] = { osc, gain };
-      });
+      startOscillators();
     } else {
-      Object.values(oscillatorsRef.current).forEach(({ osc }) => osc.stop());
-      oscillatorsRef.current = {};
+      stopOscillators();
     }
   }, [isPlaying]);
 
   useEffect(() => {
     if (isPlaying) {
-      NOTES.forEach((note) => {
-        const baseNote = note.replace("'", "");
-        const oscObj = oscillatorsRef.current[note];
-        if (oscObj && activeNotes[note]) {
-          oscObj.osc.frequency.setValueAtTime(
-            detuneFrequency(BASE_FREQUENCIES[note], detuneCents[baseNote]),
-            audioCtx.currentTime
-          );
-        }
-      });
+      updateOscillators();
     }
-  }, [detuneCents]);
-
-  useEffect(() => {
-    if (!isPlaying) return;
-    NOTES.forEach((note) => {
-      const baseNote = note.replace("'", "");
-      const isActive = activeNotes[note];
-      const oscObj = oscillatorsRef.current[note];
-      if (isActive && !oscObj) {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = waveform;
-        osc.frequency.setValueAtTime(
-          detuneFrequency(BASE_FREQUENCIES[note], detuneCents[baseNote]),
-          audioCtx.currentTime
-        );
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        oscillatorsRef.current[note] = { osc, gain };
-      } else if (!isActive && oscObj) {
-        oscObj.osc.stop();
-        delete oscillatorsRef.current[note];
-      }
-    });
-  }, [activeNotes]);
+  }, [detuneCents, activeNotes]);
 
   const toggleNote = (note: string) => {
     setActiveNotes((prev) => ({
@@ -169,20 +81,6 @@ export default function TriadTuner() {
   return (
     <div className="p-4 space-y-6">
       <h1 className="text-2xl font-bold">Tone Tuner</h1>
-
-      <div className="mb-4">
-        <label className="block font-medium mb-1">Waveform Type</label>
-        <select
-          className="border p-2 rounded"
-          value={waveform}
-          onChange={(e) => setWaveform(e.target.value)}
-        >
-          <option value="sine">Sine (default)</option>
-          <option value="triangle">Triangle</option>
-          <option value="square">Square</option>
-          <option value="sawtooth">Sawtooth</option>
-        </select>
-      </div>
 
       <div className="flex gap-4">
         <div>
