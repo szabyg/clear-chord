@@ -138,6 +138,7 @@ export default function TriadTuner() {
               max={50.0}
               step={0.1}
               value={[detuneCents[note]]}
+              disabled={!(activeNotes[note] || activeNotes[note + "'"])}
               onValueChange={([val]) =>
                 setDetuneCents((prev) => ({ ...prev, [note]: val }))
               }
