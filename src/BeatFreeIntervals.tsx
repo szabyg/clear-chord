@@ -24,7 +24,20 @@ const NOTE_NAMES = [
   "H",
 ];
 
-const INTERVALS = {
+type IntervalName =
+  | "Perfect Octave"
+  | "Perfect Fifth"
+  | "Perfect Fourth"
+  | "Major Third"
+  | "Minor Third"
+  | "Major Sixth"
+  | "Minor Sixth"
+  | "Major Second"
+  | "Minor Second"
+  | "Major Seventh"
+  | "Minor Seventh";
+
+const INTERVALS: Record<IntervalName, { ratio: number; semitones: number }> = {
   "Perfect Octave": { ratio: 2 / 1, semitones: 12 },
   "Perfect Fifth": { ratio: 3 / 2, semitones: 7 },
   "Perfect Fourth": { ratio: 4 / 3, semitones: 5 },
@@ -65,15 +78,12 @@ export default function BeatFreeIntervals() {
     initialActives
   );
   const [rootNote, setRootNote] = useState("C");
-  const [selectedInterval, setSelectedInterval] = useState("Perfect Fifth");
+  const [selectedInterval, setSelectedInterval] = useState<IntervalName>("Perfect Fifth");
 
   const { startOscillators, stopOscillators, updateOscillators } =
     useOscillators(isPlaying, activeNotes, detuneCents);
 
-  const applyInterval = () => {
-    // Reset all active notes
-    const newActiveNotes = { ...initialActives };
-
+  const applySelectedInterval = () => {
     // Get the root note index
     const rootIndex = NOTE_NAMES.indexOf(rootNote);
 
@@ -85,22 +95,81 @@ export default function BeatFreeIntervals() {
     const secondNote = NOTE_NAMES[secondNoteIndex];
 
     // Set the root note and second note as active
+    const newActiveNotes = { ...initialActives };
     newActiveNotes[rootNote] = true;
     newActiveNotes[rootNote + "'"] = true;
     newActiveNotes[secondNote] = true;
     newActiveNotes[secondNote + "'"] = true;
 
-    // Calculate the cent difference for the second note
-    const centsDifference = calculateCentsDifference(
-      interval.ratio,
-      interval.semitones
-    );
-
-    // Update the detune cents for the second note
-    const newDetuneCents = { ...initialDetunes };
-    newDetuneCents[secondNote] = centsDifference;
-
     setActiveNotes(newActiveNotes);
+  };
+
+  const tuneBeatFree = () => {
+    // Keep the current active notes
+    const currentActiveNotes = { ...activeNotes };
+
+    // Find the lowest active note
+    let lowestNoteIndex = -1;
+    for (let i = 0; i < NOTE_NAMES.length; i++) {
+      const note = NOTE_NAMES[i];
+      if (currentActiveNotes[note] || currentActiveNotes[note + "'"]) {
+        lowestNoteIndex = i;
+        break;
+      }
+    }
+
+    // If no active notes, do nothing
+    if (lowestNoteIndex === -1) return;
+
+    const lowestNote = NOTE_NAMES[lowestNoteIndex];
+
+    // Create new detune cents object
+    const newDetuneCents = { ...initialDetunes };
+
+    // For each active note, calculate the beat-free interval based on its distance from the lowest note
+    for (let i = 0; i < NOTE_NAMES.length; i++) {
+      const note = NOTE_NAMES[i];
+
+      // Skip inactive notes
+      if (!currentActiveNotes[note] && !currentActiveNotes[note + "'"]) continue;
+
+      // Skip the lowest note (it's our reference)
+      if (i === lowestNoteIndex) continue;
+
+      // Calculate semitone distance from lowest note
+      let semitones = i - lowestNoteIndex;
+      if (semitones < 0) semitones += 12; // Wrap around for notes below the lowest
+
+      // Find the closest just intonation interval
+      let bestRatio = 1;
+      let smallestDifference = Infinity;
+
+      // Check all intervals to find the one that best matches this semitone distance
+      for (const intervalName in INTERVALS) {
+        if (Object.prototype.hasOwnProperty.call(INTERVALS, intervalName)) {
+          const interval = INTERVALS[intervalName as IntervalName];
+          if (interval.semitones === semitones) {
+            // Exact match found
+            bestRatio = interval.ratio;
+            break;
+          }
+
+          // Calculate how close this interval is to the desired semitone distance
+          const difference = Math.abs(interval.semitones - semitones);
+          if (difference < smallestDifference) {
+            smallestDifference = difference;
+            bestRatio = interval.ratio;
+          }
+        }
+      }
+
+      // Calculate the cent difference for this note
+      const centsDifference = calculateCentsDifference(bestRatio, semitones);
+
+      // Update the detune cents for this note
+      newDetuneCents[note] = centsDifference;
+    }
+
     setDetuneCents(newDetuneCents);
   };
 
@@ -164,9 +233,9 @@ export default function BeatFreeIntervals() {
             <select
               className="border p-2 rounded"
               value={selectedInterval}
-              onChange={(e) => setSelectedInterval(e.target.value)}
+              onChange={(e) => setSelectedInterval(e.target.value as IntervalName)}
             >
-              {Object.keys(INTERVALS).map((interval) => (
+              {(Object.keys(INTERVALS) as IntervalName[]).map((interval) => (
                 <option key={interval} value={interval}>
                   {interval}
                 </option>
@@ -174,7 +243,8 @@ export default function BeatFreeIntervals() {
             </select>
           </div>
           <div className="flex flex-wrap items-end gap-2">
-            <Button onClick={applyInterval}>Apply Interval</Button>
+            <Button onClick={applySelectedInterval}>Apply Interval</Button>
+            <Button onClick={tuneBeatFree}>Tune Beat-Free</Button>
             <Button onClick={resetPitches}>Equal temperament</Button>
             <Button onClick={togglePlayback}>
               {isPlaying ? "Stop" : "Play"}
@@ -198,10 +268,10 @@ export default function BeatFreeIntervals() {
           </p>
         </div>
 
-        {NOTE_NAMES.filter(note => activeNotes[note] || activeNotes[note + "'"]).map((note) => (
+        {NOTE_NAMES.map((note) => (
           <div key={note} className="space-y-2">
             <label
-              className="block font-medium cursor-pointer text-black"
+              className={`block font-medium cursor-pointer ${activeNotes[note] || activeNotes[note + "'"] ? "text-black" : "text-gray-400"}`}
               onClick={() => toggleNote(note)}
             >
               {note} : {detuneCents[note]} cents
@@ -211,6 +281,7 @@ export default function BeatFreeIntervals() {
               max={50.0}
               step={0.1}
               value={[detuneCents[note]]}
+              disabled={!(activeNotes[note] || activeNotes[note + "'"])}
               onValueChange={([val]) =>
                 setDetuneCents((prev) => ({ ...prev, [note]: val }))
               }

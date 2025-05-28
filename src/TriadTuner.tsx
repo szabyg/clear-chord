@@ -124,17 +124,17 @@ export default function TriadTuner() {
           </div>
           <div className="flex flex-wrap items-end gap-2">
             <Button onClick={applyChord}>Apply Chord</Button>
-            <Button onClick={resetPitches}>Reset Pitches</Button>
+            <Button onClick={resetPitches}>Equal temperament</Button>
             <Button onClick={togglePlayback}>
               {isPlaying ? "Stop" : "Play"}
             </Button>
           </div>
         </div>
 
-        {NOTE_NAMES.filter(note => activeNotes[note] || activeNotes[note + "'"]).map((note) => (
+        {NOTE_NAMES.map((note) => (
           <div key={note} className="space-y-2">
             <label
-              className="block font-medium cursor-pointer text-black"
+              className={`block font-medium cursor-pointer ${activeNotes[note] || activeNotes[note + "'"] ? "text-black" : "text-gray-400"}`}
               onClick={() => toggleNote(note)}
             >
               {note} : {detuneCents[note]} cents
@@ -144,6 +144,7 @@ export default function TriadTuner() {
               max={50.0}
               step={0.1}
               value={[detuneCents[note]]}
+              disabled={!(activeNotes[note] || activeNotes[note + "'"])}
               onValueChange={([val]) =>
                 setDetuneCents((prev) => ({ ...prev, [note]: val }))
               }
