@@ -78,6 +78,10 @@ export default function TriadTuner() {
     }));
   };
 
+  const togglePlayback = () => {
+    setIsPlaying(!isPlaying);
+  };
+
   return (
     <div className="flex justify-center w-full">
       <div className="w-full max-w-4xl p-4 space-y-6">
@@ -115,11 +119,8 @@ export default function TriadTuner() {
           <div className="flex flex-wrap items-end gap-2">
             <Button onClick={applyChord}>Apply Chord</Button>
             <Button onClick={resetPitches}>Reset Pitches</Button>
-            <Button onClick={() => setIsPlaying(true)} disabled={isPlaying}>
-              Play
-            </Button>
-            <Button onClick={() => setIsPlaying(false)} disabled={!isPlaying}>
-              Stop
+            <Button onClick={togglePlayback}>
+              {isPlaying ? "Stop" : "Play"}
             </Button>
           </div>
         </div>
