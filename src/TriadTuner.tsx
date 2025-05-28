@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { useLocalStorageState } from "@/hooks/useLocalStorageState";
@@ -85,7 +86,12 @@ export default function TriadTuner() {
   return (
     <div className="flex justify-center w-full">
       <div className="w-full max-w-4xl p-4 space-y-6">
-        <h1 className="text-2xl font-bold">Tone Tuner</h1>
+        <div className="flex justify-between items-center">
+          <h1 className="text-2xl font-bold">Tone Tuner</h1>
+          <Link to="/" className="text-blue-600 hover:underline">
+            Back to Home
+          </Link>
+        </div>
 
         <div className="flex flex-col md:flex-row gap-4">
           <div>

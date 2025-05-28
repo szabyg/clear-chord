@@ -1,9 +1,18 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import TriadTuner from "./TriadTuner";
+import LandingPage from "./LandingPage";
+import NotFound from "./NotFound";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <TriadTuner />
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/free-tone-tuner" element={<TriadTuner />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
   </React.StrictMode>
 );
