@@ -8,7 +8,7 @@ import NotFound from "./NotFound";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/triad-tuner">
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/free-tone-tuner" element={<TriadTuner />} />
