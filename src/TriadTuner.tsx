@@ -79,69 +79,71 @@ export default function TriadTuner() {
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">Tone Tuner</h1>
+    <div className="flex justify-center w-full">
+      <div className="w-full max-w-4xl p-4 space-y-6">
+        <h1 className="text-2xl font-bold">Tone Tuner</h1>
 
-      <div className="flex gap-4">
-        <div>
-          <label className="block font-medium mb-1">Root Note</label>
-          <select
-            className="border p-2 rounded"
-            value={rootNote}
-            onChange={(e) => setRootNote(e.target.value)}
-          >
-            {NOTE_NAMES.map((note) => (
-              <option key={note} value={note}>
-                {note}
-              </option>
-            ))}
-          </select>
+        <div className="flex flex-col md:flex-row gap-4">
+          <div>
+            <label className="block font-medium mb-1">Root Note</label>
+            <select
+              className="border p-2 rounded"
+              value={rootNote}
+              onChange={(e) => setRootNote(e.target.value)}
+            >
+              {NOTE_NAMES.map((note) => (
+                <option key={note} value={note}>
+                  {note}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block font-medium mb-1">Chord Type</label>
+            <select
+              className="border p-2 rounded"
+              value={chordType}
+              onChange={(e) => setChordType(e.target.value)}
+            >
+              {Object.keys(CHORD_TYPES).map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap items-end gap-2">
+            <Button onClick={applyChord}>Apply Chord</Button>
+            <Button onClick={resetPitches}>Reset Pitches</Button>
+            <Button onClick={() => setIsPlaying(true)} disabled={isPlaying}>
+              Play
+            </Button>
+            <Button onClick={() => setIsPlaying(false)} disabled={!isPlaying}>
+              Stop
+            </Button>
+          </div>
         </div>
-        <div>
-          <label className="block font-medium mb-1">Chord Type</label>
-          <select
-            className="border p-2 rounded"
-            value={chordType}
-            onChange={(e) => setChordType(e.target.value)}
-          >
-            {Object.keys(CHORD_TYPES).map((type) => (
-              <option key={type} value={type}>
-                {type}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end gap-2">
-          <Button onClick={applyChord}>Apply Chord</Button>
-          <Button onClick={resetPitches}>Reset Pitches</Button>
-          <Button onClick={() => setIsPlaying(true)} disabled={isPlaying}>
-            Play
-          </Button>
-          <Button onClick={() => setIsPlaying(false)} disabled={!isPlaying}>
-            Stop
-          </Button>
-        </div>
+
+        {NOTE_NAMES.map((note) => (
+          <div key={note} className="space-y-2">
+            <label
+              className={`block font-medium cursor-pointer ${activeNotes[note] || activeNotes[note + "'"] ? "text-black" : "text-gray-400"}`}
+              onClick={() => toggleNote(note)}
+            >
+              {note} / {note}' : {detuneCents[note]} cents
+            </label>
+            <Slider
+              min={-50.0}
+              max={50.0}
+              step={0.1}
+              value={[detuneCents[note]]}
+              onValueChange={([val]) =>
+                setDetuneCents((prev) => ({ ...prev, [note]: val }))
+              }
+            />
+          </div>
+        ))}
       </div>
-
-      {NOTE_NAMES.map((note) => (
-        <div key={note} className="space-y-2">
-          <label
-            className={`block font-medium cursor-pointer ${activeNotes[note] || activeNotes[note + "'"] ? "text-black" : "text-gray-400"}`}
-            onClick={() => toggleNote(note)}
-          >
-            {note} / {note}' : {detuneCents[note]} cents
-          </label>
-          <Slider
-            min={-50.0}
-            max={50.0}
-            step={0.1}
-            value={[detuneCents[note]]}
-            onValueChange={([val]) =>
-              setDetuneCents((prev) => ({ ...prev, [note]: val }))
-            }
-          />
-        </div>
-      ))}
     </div>
   );
 }
