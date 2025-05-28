@@ -131,20 +131,19 @@ export default function TriadTuner() {
           </div>
         </div>
 
-        {NOTE_NAMES.map((note) => (
+        {NOTE_NAMES.filter(note => activeNotes[note] || activeNotes[note + "'"]).map((note) => (
           <div key={note} className="space-y-2">
             <label
-              className={`block font-medium cursor-pointer ${activeNotes[note] || activeNotes[note + "'"] ? "text-black" : "text-gray-400"}`}
+              className="block font-medium cursor-pointer text-black"
               onClick={() => toggleNote(note)}
             >
-              {note} / {note}' : {detuneCents[note]} cents
+              {note} : {detuneCents[note]} cents
             </label>
             <Slider
               min={-50.0}
               max={50.0}
               step={0.1}
               value={[detuneCents[note]]}
-              disabled={!(activeNotes[note] || activeNotes[note + "'"])}
               onValueChange={([val]) =>
                 setDetuneCents((prev) => ({ ...prev, [note]: val }))
               }

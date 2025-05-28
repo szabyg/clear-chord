@@ -10,10 +10,15 @@ export default function LandingPage() {
         <p className="text-xl">
           A simple tool to help you tune and experiment with musical tones and chords.
         </p>
-        <div className="py-4">
+        <div className="py-4 flex flex-col md:flex-row gap-4 justify-center">
           <Link to="/free-tone-tuner">
-            <Button className="text-lg px-6 py-3">
+            <Button className="text-lg px-6 py-3 w-full md:w-auto">
               Try the Free Tone Tuner
+            </Button>
+          </Link>
+          <Link to="/beat-free-intervals">
+            <Button className="text-lg px-6 py-3 w-full md:w-auto">
+              Explore Beat-Free Intervals
             </Button>
           </Link>
         </div>
@@ -22,6 +27,7 @@ export default function LandingPage() {
           <ul className="space-y-2 text-left max-w-md mx-auto">
             <li>• Tune individual notes with cent precision</li>
             <li>• Apply different chord types</li>
+            <li>• Explore beat-free intervals with just intonation</li>
             <li>• Toggle notes on and off</li>
             <li>• Play and hear your tunings in real-time</li>
           </ul>
