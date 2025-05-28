@@ -41,7 +41,7 @@ export default function TriadTuner() {
     initialDetunes
   );
   const [isPlaying, setIsPlaying] = useState(false);
-  const [activeNotes, setActiveNotes] = useState(initialActives);
+  const [activeNotes, setActiveNotes] = useLocalStorageState("activeNotes", initialActives);
   const [rootNote, setRootNote] = useState("C");
   const [chordType, setChordType] = useState("Dur");
 

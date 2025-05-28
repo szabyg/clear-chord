@@ -21,7 +21,8 @@ export function initializeActiveNotes(
 ): Record<string, boolean> {
   return notes.reduce(
     (acc, note) => {
-      acc[note] = false;
+      // Set C and E as active by default
+      acc[note] = note === "C" || note === "E" || note === "C'" || note === "E'";
       return acc;
     },
     {} as Record<string, boolean>
