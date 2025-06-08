@@ -115,20 +115,47 @@ export function useOscillators(
 
   const updateOscillators = () => {
     const now = audioCtx.current.currentTime;
+    const adjustedGain = calculateAdjustedGain();
+
+    // Update gain for all oscillators first
+    updateAllGains();
 
     Object.keys(activeNotes).forEach((note) => {
       const baseNote = note.replace("'", "");
       const oscObj = oscillatorsRef.current[note];
-      if (oscObj && activeNotes[note]) {
-        // Set current frequency value
-        oscObj.osc.frequency.setValueAtTime(oscObj.osc.frequency.value, now);
-        // Gradually transition to the new frequency over FREQ_TRANSITION_TIME
-        // Use targetDetuneCents if provided, otherwise use detuneCents
-        const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
-        oscObj.osc.frequency.linearRampToValueAtTime(
-          detuneFrequency(BASE_FREQUENCIES[note], detuneValue),
-          now + FREQ_TRANSITION_TIME
-        );
+
+      if (activeNotes[note]) {
+        if (oscObj) {
+          // Update existing oscillator
+          // Set current frequency value
+          oscObj.osc.frequency.setValueAtTime(oscObj.osc.frequency.value, now);
+          // Gradually transition to the new frequency over FREQ_TRANSITION_TIME
+          // Use targetDetuneCents if provided, otherwise use detuneCents
+          const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
+          oscObj.osc.frequency.linearRampToValueAtTime(
+            detuneFrequency(BASE_FREQUENCIES[note], detuneValue),
+            now + FREQ_TRANSITION_TIME
+          );
+        } else {
+          // Create new oscillator for newly activated note
+          const osc = audioCtx.current.createOscillator();
+          const gain = audioCtx.current.createGain();
+          osc.type = "sine";
+
+          // Set initial frequency
+          const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
+          const targetFreq = detuneFrequency(BASE_FREQUENCIES[note], detuneValue);
+          osc.frequency.setValueAtTime(targetFreq, now);
+
+          // Start with zero gain and fade in
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(adjustedGain, now + FADE_TIME);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.current.destination);
+          osc.start();
+          oscillatorsRef.current[note] = { osc, gain };
+        }
       } else if (!activeNotes[note] && oscObj) {
         // Fade out before stopping
         oscObj.gain.gain.cancelScheduledValues(now);
@@ -143,9 +170,6 @@ export function useOscillators(
         }, FADE_TIME * 1000);
       }
     });
-
-    // Update gain for all oscillators based on the number of active notes
-    updateAllGains();
   };
 
   return { startOscillators, stopOscillators, updateOscillators };
