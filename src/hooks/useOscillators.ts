@@ -13,25 +13,30 @@ export function useOscillators(
   const oscillatorsRef = useRef<Record<string, any>>({});
   const BASE_FREQUENCIES = calculateFrequencies();
   const FADE_TIME = 0.05; // 50ms fade time
+  const FREQ_TRANSITION_TIME = 2;
 
   const startOscillators = () => {
+    const now = audioCtx.current.currentTime;
     Object.keys(activeNotes).forEach((note) => {
       if (!activeNotes[note]) return;
       const baseNote = note.replace("'", "");
       const osc = audioCtx.current.createOscillator();
       const gain = audioCtx.current.createGain();
       osc.type = "sine";
-      osc.frequency.setValueAtTime(
-        detuneFrequency(BASE_FREQUENCIES[note], detuneCents[baseNote]),
-        audioCtx.current.currentTime
+
+      // Set initial frequency (default frequency for the oscillator)
+      const targetFreq = detuneFrequency(
+        BASE_FREQUENCIES[note],
+        detuneCents[baseNote]
       );
+      osc.frequency.setValueAtTime(targetFreq, now);
+
+      // For new oscillators, we don't need to transition from a previous value
+      // But we'll keep the code consistent with updateOscillators for maintainability
 
       // Start with zero gain and fade in
-      gain.gain.setValueAtTime(0, audioCtx.current.currentTime);
-      gain.gain.linearRampToValueAtTime(
-        0.2,
-        audioCtx.current.currentTime + FADE_TIME
-      );
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.2, now + FADE_TIME);
 
       osc.connect(gain);
       gain.connect(audioCtx.current.destination);
@@ -75,9 +80,12 @@ export function useOscillators(
       const baseNote = note.replace("'", "");
       const oscObj = oscillatorsRef.current[note];
       if (oscObj && activeNotes[note]) {
-        oscObj.osc.frequency.setValueAtTime(
+        // Set current frequency value
+        oscObj.osc.frequency.setValueAtTime(oscObj.osc.frequency.value, now);
+        // Gradually transition to the new frequency over FREQ_TRANSITION_TIME
+        oscObj.osc.frequency.linearRampToValueAtTime(
           detuneFrequency(BASE_FREQUENCIES[note], detuneCents[baseNote]),
-          now
+          now + FREQ_TRANSITION_TIME
         );
       } else if (!activeNotes[note] && oscObj) {
         // Fade out before stopping
