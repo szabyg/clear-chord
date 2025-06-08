@@ -90,13 +90,17 @@ export default function BeatFreeIntervals() {
     useState<IntervalName>("Perfect Fifth");
   const animationRef = useRef<number | null>(null);
 
+  // Track whether the update is from a slider adjustment
+  const [isSliderAdjustment, setIsSliderAdjustment] = useState(false);
+
   const { startOscillators, stopOscillators, updateOscillators } =
     useOscillators(
       isPlaying,
       activeNotes,
       detuneCents,
       SLIDER_TRANSITION_TIME,
-      targetDetuneCents
+      targetDetuneCents,
+      isSliderAdjustment
     );
 
   const applySelectedInterval = () => {
@@ -121,6 +125,9 @@ export default function BeatFreeIntervals() {
   };
 
   const tuneBeatFree = () => {
+    // Ensure this is not treated as a slider adjustment
+    setIsSliderAdjustment(false);
+
     // Keep the current active notes
     const currentActiveNotes = { ...activeNotes };
 
@@ -192,6 +199,9 @@ export default function BeatFreeIntervals() {
   };
 
   const resetPitches = () => {
+    // Ensure this is not treated as a slider adjustment
+    setIsSliderAdjustment(false);
+
     // Set the target values to trigger animation
     setTargetDetuneCents(initialDetunes);
   };
@@ -383,10 +393,18 @@ export default function BeatFreeIntervals() {
               value={[detuneCents[note]]}
               disabled={!(activeNotes[note] || activeNotes[note + "'"])}
               onValueChange={([val]) => {
+                // Set flag for immediate update
+                setIsSliderAdjustment(true);
+
                 // Update both current and target values for manual adjustments
                 const newValue = { ...detuneCents, [note]: val };
                 setDetuneCents(newValue);
                 setTargetDetuneCents(newValue);
+
+                // Reset flag after a short delay to ensure the update has been processed
+                setTimeout(() => {
+                  setIsSliderAdjustment(false);
+                }, 50);
               }}
             />
           </div>

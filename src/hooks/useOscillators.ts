@@ -7,7 +7,8 @@ export function useOscillators(
   activeNotes: Record<string, boolean>,
   detuneCents: Record<string, number>,
   transitionTimeMs: number = 500,
-  targetDetuneCents?: Record<string, number>
+  targetDetuneCents?: Record<string, number>,
+  isImmediateUpdate: boolean = false
 ) {
   const audioCtx = useRef(
     new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -127,15 +128,22 @@ export function useOscillators(
       if (activeNotes[note]) {
         if (oscObj) {
           // Update existing oscillator
-          // Set current frequency value
-          oscObj.osc.frequency.setValueAtTime(oscObj.osc.frequency.value, now);
-          // Gradually transition to the new frequency over FREQ_TRANSITION_TIME
           // Use targetDetuneCents if provided, otherwise use detuneCents
           const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
-          oscObj.osc.frequency.linearRampToValueAtTime(
-            detuneFrequency(BASE_FREQUENCIES[note], detuneValue),
-            now + FREQ_TRANSITION_TIME
-          );
+          const targetFreq = detuneFrequency(BASE_FREQUENCIES[note], detuneValue);
+
+          if (isImmediateUpdate) {
+            // For immediate updates (slider adjustments), set the frequency immediately
+            oscObj.osc.frequency.cancelScheduledValues(now);
+            oscObj.osc.frequency.setValueAtTime(targetFreq, now);
+          } else {
+            // For gradual updates (button clicks), transition over time
+            oscObj.osc.frequency.setValueAtTime(oscObj.osc.frequency.value, now);
+            oscObj.osc.frequency.linearRampToValueAtTime(
+              targetFreq,
+              now + FREQ_TRANSITION_TIME
+            );
+          }
         } else {
           // Create new oscillator for newly activated note
           const osc = audioCtx.current.createOscillator();
@@ -145,6 +153,9 @@ export function useOscillators(
           // Set initial frequency
           const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
           const targetFreq = detuneFrequency(BASE_FREQUENCIES[note], detuneValue);
+
+          // For new oscillators, we always set the initial frequency immediately
+          // but we can schedule a transition if needed
           osc.frequency.setValueAtTime(targetFreq, now);
 
           // Start with zero gain and fade in
