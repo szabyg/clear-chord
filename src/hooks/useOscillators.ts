@@ -16,9 +16,47 @@ export function useOscillators(
   const BASE_FREQUENCIES = calculateFrequencies();
   const FADE_TIME = 0.05; // 50ms fade time
   const FREQ_TRANSITION_TIME = transitionTimeMs / 1000; // Convert ms to seconds
+  const BASE_GAIN = 0.2; // Base gain value for a single note
+
+  // Calculate the number of active notes
+  const getActiveNotesCount = (): number => {
+    return Object.values(activeNotes).filter(active => active).length;
+  };
+
+  // Calculate adjusted gain based on number of active notes
+  const calculateAdjustedGain = (): number => {
+    const activeCount = getActiveNotesCount();
+    // Scale down gain as more notes are added
+    // For 1-3 notes, use BASE_GAIN
+    // For 4+ notes, scale down to prevent clipping
+    if (activeCount <= 3) {
+      return BASE_GAIN;
+    } else {
+      // Formula: BASE_GAIN * (3 / activeCount)
+      // This ensures that with 4 notes, gain is 0.15, with 6 notes it's 0.1, etc.
+      return BASE_GAIN * (3 / activeCount);
+    }
+  };
+
+  // Update gain for all active oscillators
+  const updateAllGains = () => {
+    const now = audioCtx.current.currentTime;
+    const adjustedGain = calculateAdjustedGain();
+
+    Object.entries(oscillatorsRef.current).forEach(([note, { gain }]) => {
+      if (activeNotes[note]) {
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(gain.gain.value, now);
+        gain.gain.linearRampToValueAtTime(adjustedGain, now + FADE_TIME);
+      }
+    });
+  };
 
   const startOscillators = () => {
     const now = audioCtx.current.currentTime;
+    // Calculate adjusted gain based on number of active notes
+    const adjustedGain = calculateAdjustedGain();
+
     Object.keys(activeNotes).forEach((note) => {
       if (!activeNotes[note]) return;
       const baseNote = note.replace("'", "");
@@ -36,9 +74,9 @@ export function useOscillators(
       // For new oscillators, we don't need to transition from a previous value
       // But we'll keep the code consistent with updateOscillators for maintainability
 
-      // Start with zero gain and fade in
+      // Start with zero gain and fade in to the adjusted gain value
       gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.2, now + FADE_TIME);
+      gain.gain.linearRampToValueAtTime(adjustedGain, now + FADE_TIME);
 
       osc.connect(gain);
       gain.connect(audioCtx.current.destination);
@@ -105,6 +143,9 @@ export function useOscillators(
         }, FADE_TIME * 1000);
       }
     });
+
+    // Update gain for all oscillators based on the number of active notes
+    updateAllGains();
   };
 
   return { startOscillators, stopOscillators, updateOscillators };
