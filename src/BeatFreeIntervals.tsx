@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -35,20 +35,25 @@ type IntervalName =
   | "Major Second"
   | "Minor Second"
   | "Major Seventh"
-  | "Minor Seventh";
+  | "Minor Seventh"
+  | "Triton";
 
 const INTERVALS: Record<IntervalName, { ratio: number; semitones: number }> = {
-  "Perfect Octave": { ratio: 2 / 1, semitones: 12 },
-  "Perfect Fifth": { ratio: 3 / 2, semitones: 7 },
-  "Perfect Fourth": { ratio: 4 / 3, semitones: 5 },
-  "Major Third": { ratio: 5 / 4, semitones: 4 },
-  "Minor Third": { ratio: 6 / 5, semitones: 3 },
-  "Major Sixth": { ratio: 5 / 3, semitones: 9 },
-  "Minor Sixth": { ratio: 8 / 5, semitones: 8 },
-  "Major Second": { ratio: 9 / 8, semitones: 2 },
   "Minor Second": { ratio: 16 / 15, semitones: 1 },
-  "Major Seventh": { ratio: 15 / 8, semitones: 11 },
+  "Major Second": { ratio: 9 / 8, semitones: 2 },
+  "Minor Third": { ratio: 6 / 5, semitones: 3 },
+  "Major Third": { ratio: 5 / 4, semitones: 4 },
+  "Perfect Fourth": { ratio: 4 / 3, semitones: 5 },
+  Triton: {
+    ratio: 45 / 32,
+    semitones: 6,
+  },
+  "Perfect Fifth": { ratio: 3 / 2, semitones: 7 },
+  "Minor Sixth": { ratio: 8 / 5, semitones: 8 },
+  "Major Sixth": { ratio: 5 / 3, semitones: 9 },
   "Minor Seventh": { ratio: 16 / 9, semitones: 10 },
+  "Major Seventh": { ratio: 15 / 8, semitones: 11 },
+  "Perfect Octave": { ratio: 2 / 1, semitones: 12 },
 };
 
 // Convert frequency ratio to cents
@@ -67,21 +72,32 @@ export default function BeatFreeIntervals() {
   const initialDetunes = initializeDetuneCents(NOTE_NAMES);
   const NOTES = NOTE_NAMES.concat(NOTE_NAMES.map((n) => n + "'")).flat();
   const initialActives = initializeActiveNotes(NOTES);
+  const SLIDER_TRANSITION_TIME = 2000;
 
   const [detuneCents, setDetuneCents] = useLocalStorageState(
     "beatFreeDetuneCents",
     initialDetunes
   );
+  const [targetDetuneCents, setTargetDetuneCents] =
+    useState<Record<string, number>>(initialDetunes);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeNotes, setActiveNotes] = useLocalStorageState(
     "beatFreeActiveNotes",
     initialActives
   );
   const [rootNote, setRootNote] = useState("C");
-  const [selectedInterval, setSelectedInterval] = useState<IntervalName>("Perfect Fifth");
+  const [selectedInterval, setSelectedInterval] =
+    useState<IntervalName>("Perfect Fifth");
+  const animationRef = useRef<number | null>(null);
 
   const { startOscillators, stopOscillators, updateOscillators } =
-    useOscillators(isPlaying, activeNotes, detuneCents);
+    useOscillators(
+      isPlaying,
+      activeNotes,
+      detuneCents,
+      SLIDER_TRANSITION_TIME,
+      targetDetuneCents
+    );
 
   const applySelectedInterval = () => {
     // Get the root note index
@@ -131,7 +147,8 @@ export default function BeatFreeIntervals() {
       const note = NOTE_NAMES[i];
 
       // Skip inactive notes
-      if (!currentActiveNotes[note] && !currentActiveNotes[note + "'"]) continue;
+      if (!currentActiveNotes[note] && !currentActiveNotes[note + "'"])
+        continue;
 
       // Skip the lowest note (it's our reference)
       if (i === lowestNoteIndex) continue;
@@ -170,11 +187,13 @@ export default function BeatFreeIntervals() {
       newDetuneCents[note] = centsDifference;
     }
 
-    setDetuneCents(newDetuneCents);
+    // Set the target values to trigger animation
+    setTargetDetuneCents(newDetuneCents);
   };
 
   const resetPitches = () => {
-    setDetuneCents(initialDetunes);
+    // Set the target values to trigger animation
+    setTargetDetuneCents(initialDetunes);
   };
 
   useEffect(() => {
@@ -185,11 +204,90 @@ export default function BeatFreeIntervals() {
     }
   }, [isPlaying]);
 
+  // Initialize targetDetuneCents with current detuneCents on mount
+  useEffect(() => {
+    setTargetDetuneCents(detuneCents);
+  }, []);
+
+  // Effect to update oscillators when active notes change
   useEffect(() => {
     if (isPlaying) {
       updateOscillators();
     }
-  }, [detuneCents, activeNotes]);
+  }, [activeNotes]);
+
+  // Effect to update oscillators when target detune cents change
+  useEffect(() => {
+    if (isPlaying) {
+      // Update oscillators immediately when target changes
+      // This ensures audio transition starts at the same time as slider animation
+      updateOscillators();
+    }
+  }, [targetDetuneCents]);
+
+  // Animation effect for slider movement
+  useEffect(() => {
+    // Cancel any existing animation
+    if (animationRef.current !== null) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    // Start time of the animation
+    const startTime = performance.now();
+    // Starting values of detune cents
+    const startValues = { ...detuneCents };
+
+    // Animation function
+    const animateSliders = (currentTime: number) => {
+      // Calculate elapsed time
+      const elapsedTime = currentTime - startTime;
+
+      // Calculate progress (0 to 1)
+      const progress = Math.min(elapsedTime / SLIDER_TRANSITION_TIME, 1);
+
+      // If animation is complete
+      if (progress === 1) {
+        setDetuneCents(targetDetuneCents);
+        animationRef.current = null;
+        return;
+      }
+
+      // Calculate intermediate values for each note
+      const newDetuneCents = { ...detuneCents };
+      for (const note of NOTE_NAMES) {
+        const startValue = startValues[note];
+        const targetValue = targetDetuneCents[note];
+        newDetuneCents[note] =
+          startValue + (targetValue - startValue) * progress;
+      }
+
+      // Update state with intermediate values
+      setDetuneCents(newDetuneCents);
+
+      // Continue animation
+      animationRef.current = requestAnimationFrame(animateSliders);
+    };
+
+    // Only start animation if target values are different from current values
+    let needsAnimation = false;
+    for (const note of NOTE_NAMES) {
+      if (detuneCents[note] !== targetDetuneCents[note]) {
+        needsAnimation = true;
+        break;
+      }
+    }
+
+    if (needsAnimation) {
+      animationRef.current = requestAnimationFrame(animateSliders);
+    }
+
+    // Cleanup function
+    return () => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [targetDetuneCents]);
 
   const toggleNote = (note: string) => {
     setActiveNotes((prev) => ({
@@ -233,7 +331,9 @@ export default function BeatFreeIntervals() {
             <select
               className="border p-2 rounded"
               value={selectedInterval}
-              onChange={(e) => setSelectedInterval(e.target.value as IntervalName)}
+              onChange={(e) =>
+                setSelectedInterval(e.target.value as IntervalName)
+              }
             >
               {(Object.keys(INTERVALS) as IntervalName[]).map((interval) => (
                 <option key={interval} value={interval}>
@@ -282,9 +382,12 @@ export default function BeatFreeIntervals() {
               step={0.1}
               value={[detuneCents[note]]}
               disabled={!(activeNotes[note] || activeNotes[note + "'"])}
-              onValueChange={([val]) =>
-                setDetuneCents((prev) => ({ ...prev, [note]: val }))
-              }
+              onValueChange={([val]) => {
+                // Update both current and target values for manual adjustments
+                const newValue = { ...detuneCents, [note]: val };
+                setDetuneCents(newValue);
+                setTargetDetuneCents(newValue);
+              }}
             />
           </div>
         ))}

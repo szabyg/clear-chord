@@ -5,7 +5,9 @@ import { detuneFrequency } from "@/utils/frequencyUtils";
 export function useOscillators(
   isPlaying: boolean,
   activeNotes: Record<string, boolean>,
-  detuneCents: Record<string, number>
+  detuneCents: Record<string, number>,
+  transitionTimeMs: number = 500,
+  targetDetuneCents?: Record<string, number>
 ) {
   const audioCtx = useRef(
     new (window.AudioContext || (window as any).webkitAudioContext)()
@@ -13,7 +15,7 @@ export function useOscillators(
   const oscillatorsRef = useRef<Record<string, any>>({});
   const BASE_FREQUENCIES = calculateFrequencies();
   const FADE_TIME = 0.05; // 50ms fade time
-  const FREQ_TRANSITION_TIME = 2;
+  const FREQ_TRANSITION_TIME = transitionTimeMs / 1000; // Convert ms to seconds
 
   const startOscillators = () => {
     const now = audioCtx.current.currentTime;
@@ -83,8 +85,10 @@ export function useOscillators(
         // Set current frequency value
         oscObj.osc.frequency.setValueAtTime(oscObj.osc.frequency.value, now);
         // Gradually transition to the new frequency over FREQ_TRANSITION_TIME
+        // Use targetDetuneCents if provided, otherwise use detuneCents
+        const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
         oscObj.osc.frequency.linearRampToValueAtTime(
-          detuneFrequency(BASE_FREQUENCIES[note], detuneCents[baseNote]),
+          detuneFrequency(BASE_FREQUENCIES[note], detuneValue),
           now + FREQ_TRANSITION_TIME
         );
       } else if (!activeNotes[note] && oscObj) {
