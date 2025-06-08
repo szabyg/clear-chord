@@ -2,7 +2,7 @@
   "name": "triad-tuner",
   "version": "0.0.0",
   "scripts": {
-    "tsc": "tsc --noEmit",
+    "type-checking": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
