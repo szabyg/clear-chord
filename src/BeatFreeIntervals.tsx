@@ -85,9 +85,6 @@ export default function BeatFreeIntervals() {
     "beatFreeActiveNotes",
     initialActives
   );
-  const [rootNote, setRootNote] = useState("C");
-  const [selectedInterval, setSelectedInterval] =
-    useState<IntervalName>("Perfect Fifth");
   const animationRef = useRef<number | null>(null);
 
   // Track whether the update is from a slider adjustment
@@ -102,27 +99,6 @@ export default function BeatFreeIntervals() {
       targetDetuneCents,
       isSliderAdjustment
     );
-
-  const applySelectedInterval = () => {
-    // Get the root note index
-    const rootIndex = NOTE_NAMES.indexOf(rootNote);
-
-    // Get the interval details
-    const interval = INTERVALS[selectedInterval];
-
-    // Calculate the second note index
-    const secondNoteIndex = (rootIndex + interval.semitones) % 12;
-    const secondNote = NOTE_NAMES[secondNoteIndex];
-
-    // Set the root note and second note as active
-    const newActiveNotes = { ...initialActives };
-    newActiveNotes[rootNote] = true;
-    newActiveNotes[rootNote + "'"] = true;
-    newActiveNotes[secondNote] = true;
-    newActiveNotes[secondNote + "'"] = true;
-
-    setActiveNotes(newActiveNotes);
-  };
 
   const tuneBeatFree = () => {
     // Ensure this is not treated as a slider adjustment
@@ -143,8 +119,6 @@ export default function BeatFreeIntervals() {
 
     // If no active notes, do nothing
     if (lowestNoteIndex === -1) return;
-
-    const lowestNote = NOTE_NAMES[lowestNoteIndex];
 
     // Create new detune cents object
     const newDetuneCents = { ...initialDetunes };
@@ -322,60 +296,13 @@ export default function BeatFreeIntervals() {
         </div>
 
         <div className="flex flex-col md:flex-row gap-4">
-          <div>
-            <label className="block font-medium mb-1">Root Note</label>
-            <select
-              className="border p-2 rounded"
-              value={rootNote}
-              onChange={(e) => setRootNote(e.target.value)}
-            >
-              {NOTE_NAMES.map((note) => (
-                <option key={note} value={note}>
-                  {note}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block font-medium mb-1">Interval</label>
-            <select
-              className="border p-2 rounded"
-              value={selectedInterval}
-              onChange={(e) =>
-                setSelectedInterval(e.target.value as IntervalName)
-              }
-            >
-              {(Object.keys(INTERVALS) as IntervalName[]).map((interval) => (
-                <option key={interval} value={interval}>
-                  {interval}
-                </option>
-              ))}
-            </select>
-          </div>
           <div className="flex flex-wrap items-end gap-2">
-            <Button onClick={applySelectedInterval}>Apply Interval</Button>
-            <Button onClick={tuneBeatFree}>Tune Beat-Free</Button>
-            <Button onClick={resetPitches}>Equal temperament</Button>
             <Button onClick={togglePlayback}>
               {isPlaying ? "Stop" : "Play"}
             </Button>
+            <Button onClick={tuneBeatFree}>Tune Beat-Free</Button>
+            <Button onClick={resetPitches}>Equal temperament</Button>
           </div>
-        </div>
-
-        <div className="mt-4 p-4 bg-gray-100 rounded-md">
-          <h2 className="text-lg font-semibold mb-2">Interval Information</h2>
-          <p>
-            <strong>Ratio:</strong> {INTERVALS[selectedInterval].ratio} (Just
-            Intonation)
-          </p>
-          <p>
-            <strong>Cents Difference:</strong>{" "}
-            {calculateCentsDifference(
-              INTERVALS[selectedInterval].ratio,
-              INTERVALS[selectedInterval].semitones
-            ).toFixed(2)}{" "}
-            cents from Equal Temperament
-          </p>
         </div>
 
         {NOTE_NAMES.map((note) => (
