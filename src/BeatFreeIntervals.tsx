@@ -8,7 +8,7 @@ import {
   initializeDetuneCents,
   initializeActiveNotes,
 } from "@/utils/noteUtils";
-import { Play, Pause, Music, Equal, RefreshCcw } from "lucide-react";
+import { Play, Pause, Music, Equal, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
 
 const NOTE_NAMES = [
   "C",
@@ -85,6 +85,10 @@ export default function BeatFreeIntervals() {
   const [activeNotes, setActiveNotes] = useLocalStorageState(
     "beatFreeActiveNotes",
     initialActives
+  );
+  const [showSecondOctave, setShowSecondOctave] = useLocalStorageState(
+    "beatFreeShowSecondOctave",
+    false
   );
   const animationRef = useRef<number | null>(null);
 
@@ -391,6 +395,10 @@ export default function BeatFreeIntervals() {
     setIsPlaying(!isPlaying);
   };
 
+  const toggleSecondOctave = () => {
+    setShowSecondOctave(!showSecondOctave);
+  };
+
   const resetAll = () => {
     // Stop any playing sound
     setIsPlaying(false);
@@ -436,6 +444,10 @@ export default function BeatFreeIntervals() {
               <Equal />
               Equal temperament
             </Button>
+            <Button onClick={toggleSecondOctave}>
+              {showSecondOctave ? <ChevronUp /> : <ChevronDown />}
+              {showSecondOctave ? "Hide 2nd Octave" : "Show 2nd Octave"}
+            </Button>
             <Button onClick={resetAll} variant="destructive">
               <RefreshCcw />
               Reset All
@@ -443,7 +455,7 @@ export default function BeatFreeIntervals() {
           </div>
         </div>
 
-        {NOTES.map((note) => (
+        {NOTES.filter(note => !note.includes("'") || showSecondOctave).map((note) => (
           <div key={note} className="space-y-2">
             <div className="flex items-center gap-2">
               <Button
