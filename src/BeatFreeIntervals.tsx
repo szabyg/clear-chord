@@ -87,6 +87,11 @@ export default function BeatFreeIntervals() {
   );
   const animationRef = useRef<number | null>(null);
 
+  // Flag to prevent animation on initial load
+  const initialLoadRef = useRef(true);
+  // Flag to track if initialization effect has run
+  const initEffectRanRef = useRef(false);
+
   // Track whether the update is from a slider adjustment
   const [isSliderAdjustment, setIsSliderAdjustment] = useState(false);
 
@@ -120,8 +125,9 @@ export default function BeatFreeIntervals() {
     // If no active notes, do nothing
     if (lowestNoteIndex === -1) return;
 
-    // Create new detune cents object
-    const newDetuneCents = { ...initialDetunes };
+    // Create new detune cents object starting with current values
+    // This ensures inactive notes keep their current values
+    const newDetuneCents = { ...detuneCents };
 
     // For each active note, calculate the beat-free interval based on its distance from the lowest note
     for (let i = 0; i < NOTE_NAMES.length; i++) {
@@ -144,7 +150,7 @@ export default function BeatFreeIntervals() {
 
       // Check all intervals to find the one that best matches this semitone distance
       for (const intervalName in INTERVALS) {
-        if (Object.prototype.hasOwnProperty.call(INTERVALS, intervalName)) {
+        if (Object.hasOwn(INTERVALS, intervalName)) {
           const interval = INTERVALS[intervalName as IntervalName];
           if (interval.semitones === semitones) {
             // Exact match found
@@ -176,8 +182,17 @@ export default function BeatFreeIntervals() {
     // Ensure this is not treated as a slider adjustment
     setIsSliderAdjustment(false);
 
+    // Create new detune cents object starting with initialDetunes
+    // but keeping current values for inactive notes
+    const newDetuneCents = { ...initialDetunes };
+    for (const note of NOTE_NAMES) {
+      if (!activeNotes[note] && !activeNotes[note + "'"]) {
+        newDetuneCents[note] = detuneCents[note];
+      }
+    }
+
     // Set the target values to trigger animation
-    setTargetDetuneCents(initialDetunes);
+    setTargetDetuneCents(newDetuneCents);
   };
 
   useEffect(() => {
@@ -190,8 +205,17 @@ export default function BeatFreeIntervals() {
 
   // Initialize targetDetuneCents with current detuneCents on mount
   useEffect(() => {
-    setTargetDetuneCents(detuneCents);
-  }, []);
+    // Only run this effect once
+    if (!initEffectRanRef.current) {
+      setTargetDetuneCents(detuneCents);
+      // Set initialLoadRef to false after a small delay to ensure
+      // the initial render is complete
+      setTimeout(() => {
+        initialLoadRef.current = false;
+      }, 100);
+      initEffectRanRef.current = true;
+    }
+  }, [detuneCents]);
 
   // Effect to update oscillators when active notes change
   useEffect(() => {
@@ -211,6 +235,12 @@ export default function BeatFreeIntervals() {
 
   // Animation effect for slider movement
   useEffect(() => {
+    // Skip animation on initial load
+    if (initialLoadRef.current) {
+      setDetuneCents(targetDetuneCents);
+      return;
+    }
+
     // Cancel any existing animation
     if (animationRef.current !== null) {
       cancelAnimationFrame(animationRef.current);
@@ -239,6 +269,12 @@ export default function BeatFreeIntervals() {
       // Calculate intermediate values for each note
       const newDetuneCents = { ...detuneCents };
       for (const note of NOTE_NAMES) {
+        // Skip inactive notes - don't animate them
+        if (!activeNotes[note] && !activeNotes[note + "'"]) {
+          newDetuneCents[note] = detuneCents[note];
+          continue;
+        }
+
         const startValue = startValues[note];
         const targetValue = targetDetuneCents[note];
         newDetuneCents[note] =
@@ -252,10 +288,14 @@ export default function BeatFreeIntervals() {
       animationRef.current = requestAnimationFrame(animateSliders);
     };
 
-    // Only start animation if target values are different from current values
+    // Only start animation if target values are different from current values for active notes
     let needsAnimation = false;
     for (const note of NOTE_NAMES) {
-      if (detuneCents[note] !== targetDetuneCents[note]) {
+      // Only check active notes
+      if (
+        (activeNotes[note] || activeNotes[note + "'"]) &&
+        detuneCents[note] !== targetDetuneCents[note]
+      ) {
         needsAnimation = true;
         break;
       }
@@ -263,6 +303,9 @@ export default function BeatFreeIntervals() {
 
     if (needsAnimation) {
       animationRef.current = requestAnimationFrame(animateSliders);
+    } else {
+      // If no animation needed, just update the values
+      setDetuneCents(targetDetuneCents);
     }
 
     // Cleanup function
@@ -271,7 +314,7 @@ export default function BeatFreeIntervals() {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [targetDetuneCents]);
+  }, [targetDetuneCents, activeNotes]);
 
   const toggleNote = (note: string) => {
     setActiveNotes((prev) => ({
