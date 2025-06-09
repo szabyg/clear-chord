@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -97,7 +97,6 @@ export default function BeatFreeIntervals() {
 
   const { startOscillators, stopOscillators, updateOscillators } =
     useOscillators(
-      isPlaying,
       activeNotes,
       detuneCents,
       SLIDER_TRANSITION_TIME,
@@ -118,8 +117,13 @@ export default function BeatFreeIntervals() {
 
     // First check base notes
     for (let i = 0; i < NOTE_NAMES.length; i++) {
-      const note = NOTE_NAMES[i];
-      if (currentActiveNotes[note]) {
+      const noteKey = NOTE_NAMES[i];
+      // noteKey is guaranteed to be a string from NOTE_NAMES array
+      if (
+        noteKey &&
+        noteKey in currentActiveNotes &&
+        currentActiveNotes[noteKey] === true
+      ) {
         lowestNoteIndex = i;
         lowestNoteIsOctave = false;
         break;
@@ -129,8 +133,13 @@ export default function BeatFreeIntervals() {
     // If no base note is active, check octave notes
     if (lowestNoteIndex === -1) {
       for (let i = 0; i < NOTE_NAMES.length; i++) {
-        const note = NOTE_NAMES[i] + "'";
-        if (currentActiveNotes[note]) {
+        const noteKey = NOTE_NAMES[i] + "'";
+        // noteKey is guaranteed to be a string from NOTE_NAMES array + "'"
+        if (
+          noteKey &&
+          noteKey in currentActiveNotes &&
+          currentActiveNotes[noteKey] === true
+        ) {
           lowestNoteIndex = i;
           lowestNoteIsOctave = true;
           break;
@@ -151,14 +160,21 @@ export default function BeatFreeIntervals() {
       const octaveNote = baseNote + "'";
 
       // Skip notes that are not active in either octave
-      if (!currentActiveNotes[baseNote] && !currentActiveNotes[octaveNote])
-        continue;
+      // baseNote is guaranteed to be a string from NOTE_NAMES array
+      const isBaseNoteActive =
+        baseNote &&
+        baseNote in currentActiveNotes &&
+        currentActiveNotes[baseNote] === true;
+      // octaveNote is guaranteed to be a string from NOTE_NAMES array + "'"
+      const isOctaveNoteActive =
+        octaveNote &&
+        octaveNote in currentActiveNotes &&
+        currentActiveNotes[octaveNote] === true;
+
+      if (!isBaseNoteActive && !isOctaveNoteActive) continue;
 
       // Skip the lowest note (it's our reference)
-      if (
-        i === lowestNoteIndex &&
-        (!lowestNoteIsOctave || !currentActiveNotes[baseNote])
-      )
+      if (i === lowestNoteIndex && (!lowestNoteIsOctave || !isBaseNoteActive))
         continue;
 
       // Calculate semitone distance from lowest note
@@ -192,7 +208,10 @@ export default function BeatFreeIntervals() {
       const centsDifference = calculateCentsDifference(bestRatio, semitones);
 
       // Update the detune cents for the base note
-      newDetuneCents[baseNote] = centsDifference;
+      // baseNote is defined here because it comes from NOTE_NAMES[i]
+      if (typeof baseNote === "string" && baseNote in newDetuneCents) {
+        newDetuneCents[baseNote] = centsDifference;
+      }
     }
 
     // Set the target values to trigger animation
@@ -212,8 +231,11 @@ export default function BeatFreeIntervals() {
       const octaveNote = note + "'";
 
       // If neither the base note nor its octave is active, keep the current value
-      if (!activeNotes[note] && !activeNotes[octaveNote]) {
-        newDetuneCents[note] = detuneCents[note];
+      if (activeNotes[note] !== true && activeNotes[octaveNote] !== true) {
+        const currentValue = detuneCents[note];
+        if (currentValue !== undefined && note in newDetuneCents) {
+          newDetuneCents[note] = currentValue;
+        }
       }
     }
 
@@ -298,15 +320,26 @@ export default function BeatFreeIntervals() {
         const octaveNote = note + "'";
 
         // Skip notes that are not active in either octave
-        if (!activeNotes[note] && !activeNotes[octaveNote]) {
-          newDetuneCents[note] = detuneCents[note];
+        if (activeNotes[note] !== true && activeNotes[octaveNote] !== true) {
+          const currentValue = detuneCents[note];
+          if (currentValue !== undefined && note in newDetuneCents) {
+            newDetuneCents[note] = currentValue;
+          }
           continue;
         }
 
         const startValue = startValues[note];
         const targetValue = targetDetuneCents[note];
-        newDetuneCents[note] =
-          startValue + (targetValue - startValue) * progress;
+
+        // Ensure both values are defined before calculating
+        if (
+          startValue !== undefined &&
+          targetValue !== undefined &&
+          note in newDetuneCents
+        ) {
+          newDetuneCents[note] =
+            startValue + (targetValue - startValue) * progress;
+        }
       }
 
       // Update state with intermediate values
@@ -391,24 +424,46 @@ export default function BeatFreeIntervals() {
                 {note}
               </Button>
               <span className="font-medium">
-                {detuneCents[note.replace("'", "")].toFixed(2)} cents
+                {(detuneCents[note.replace("'", "")] ?? 0).toFixed(2)} cents
               </span>
             </div>
             <Slider
               min={-50.0}
               max={50.0}
               step={0.1}
-              value={[detuneCents[note.replace("'", "")]]}
-              disabled={!activeNotes[note]}
+              value={[detuneCents[note.replace("'", "")] ?? 0]}
+              disabled={activeNotes[note] !== true}
               onValueChange={([val]) => {
                 // Set flag for immediate update
                 setIsSliderAdjustment(true);
 
                 // Update both current and target values for manual adjustments
                 const baseNote = note.replace("'", "");
-                const newValue = { ...detuneCents, [baseNote]: val };
-                setDetuneCents(newValue);
-                setTargetDetuneCents(newValue);
+
+                // Create type-safe copies of the state
+                const newDetuneCents = { ...detuneCents };
+                const newTargetDetuneCents = { ...targetDetuneCents };
+
+                // Safely update the values
+                if (
+                  typeof baseNote === "string" &&
+                  baseNote in newDetuneCents
+                ) {
+                  // val is a number from the slider, so it's safe to assign
+                  newDetuneCents[baseNote] = val as number;
+                }
+
+                if (
+                  typeof baseNote === "string" &&
+                  baseNote in newTargetDetuneCents
+                ) {
+                  // val is a number from the slider, so it's safe to assign
+                  newTargetDetuneCents[baseNote] = val as number;
+                }
+
+                // Update state
+                setDetuneCents(newDetuneCents);
+                setTargetDetuneCents(newTargetDetuneCents);
 
                 // Reset flag after a short delay to ensure the update has been processed
                 setTimeout(() => {

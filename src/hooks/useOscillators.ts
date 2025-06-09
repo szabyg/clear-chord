@@ -2,18 +2,54 @@ import { useRef } from "react";
 import { calculateFrequencies } from "@/constants/frequencies";
 import { detuneFrequency } from "@/utils/frequencyUtils";
 
+// Define interfaces for better type safety
+interface OscillatorNode {
+  frequency: {
+    value: number;
+    setValueAtTime: (value: number, time: number) => void;
+    linearRampToValueAtTime: (value: number, time: number) => void;
+    cancelScheduledValues: (time: number) => void;
+  };
+  type: OscillatorType;
+  connect: (destination: AudioNode) => void;
+  start: () => void;
+  stop: () => void;
+}
+
+interface GainNode {
+  gain: {
+    value: number;
+    setValueAtTime: (value: number, time: number) => void;
+    linearRampToValueAtTime: (value: number, time: number) => void;
+    cancelScheduledValues: (time: number) => void;
+  };
+  connect: (destination: AudioNode) => void;
+}
+
+interface OscillatorWithGain {
+  osc: OscillatorNode;
+  gain: GainNode;
+}
+
+interface OscillatorControls {
+  startOscillators: () => void;
+  stopOscillators: () => void;
+  updateOscillators: () => void;
+}
+
 export function useOscillators(
-  isPlaying: boolean,
+  // Removed unused isPlaying parameter
   activeNotes: Record<string, boolean>,
   detuneCents: Record<string, number>,
   transitionTimeMs: number = 500,
   targetDetuneCents?: Record<string, number>,
   isImmediateUpdate: boolean = false
-) {
-  const audioCtx = useRef(
-    new (window.AudioContext || (window as any).webkitAudioContext)()
+): OscillatorControls {
+  // Use proper AudioContext type
+  const audioCtx = useRef<AudioContext>(
+    new (window.AudioContext || (window as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)()
   );
-  const oscillatorsRef = useRef<Record<string, any>>({});
+  const oscillatorsRef = useRef<Record<string, OscillatorWithGain>>({});
   const BASE_FREQUENCIES = calculateFrequencies();
   const FADE_TIME = 0.05; // 50ms fade time
   const FREQ_TRANSITION_TIME = transitionTimeMs / 1000; // Convert ms to seconds
@@ -44,8 +80,8 @@ export function useOscillators(
     const now = audioCtx.current.currentTime;
     const adjustedGain = calculateAdjustedGain();
 
-    Object.entries(oscillatorsRef.current).forEach(([note, { gain }]) => {
-      if (activeNotes[note]) {
+    Object.entries(oscillatorsRef.current).forEach(([noteKey, { gain }]) => {
+      if (activeNotes[noteKey]) {
         gain.gain.cancelScheduledValues(now);
         gain.gain.setValueAtTime(gain.gain.value, now);
         gain.gain.linearRampToValueAtTime(adjustedGain, now + FADE_TIME);
@@ -66,10 +102,19 @@ export function useOscillators(
       osc.type = "sine";
 
       // Set initial frequency (default frequency for the oscillator)
-      const targetFreq = detuneFrequency(
-        BASE_FREQUENCIES[note],
-        detuneCents[baseNote]
-      );
+      const baseFrequency = BASE_FREQUENCIES[note];
+      if (baseFrequency === undefined) {
+        console.warn(`Base frequency for note ${note} is undefined`);
+        return; // Skip this note
+      }
+
+      const detuneValue = detuneCents[baseNote];
+      if (detuneValue === undefined) {
+        console.warn(`Detune value for note ${baseNote} is undefined`);
+        return; // Skip this note
+      }
+
+      const targetFreq = detuneFrequency(baseFrequency, detuneValue);
       osc.frequency.setValueAtTime(targetFreq, now);
 
       // For new oscillators, we don't need to transition from a previous value
@@ -90,7 +135,7 @@ export function useOscillators(
     const now = audioCtx.current.currentTime;
     const oscillatorStopPromises: Promise<void>[] = [];
 
-    Object.entries(oscillatorsRef.current).forEach(([note, { osc, gain }]) => {
+    Object.entries(oscillatorsRef.current).forEach(([_noteKey, { osc, gain }]) => {
       // Create a promise that resolves after the fade-out
       const stopPromise = new Promise<void>((resolve) => {
         // Fade out gain
@@ -130,7 +175,18 @@ export function useOscillators(
           // Update existing oscillator
           // Use targetDetuneCents if provided, otherwise use detuneCents
           const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
-          const targetFreq = detuneFrequency(BASE_FREQUENCIES[note], detuneValue);
+          if (detuneValue === undefined) {
+            console.warn(`Detune value for note ${baseNote} is undefined`);
+            return; // Skip this note
+          }
+
+          const baseFrequency = BASE_FREQUENCIES[note];
+          if (baseFrequency === undefined) {
+            console.warn(`Base frequency for note ${note} is undefined`);
+            return; // Skip this note
+          }
+
+          const targetFreq = detuneFrequency(baseFrequency, detuneValue);
 
           if (isImmediateUpdate) {
             // For immediate updates (slider adjustments), set the frequency immediately
@@ -152,7 +208,18 @@ export function useOscillators(
 
           // Set initial frequency
           const detuneValue = targetDetuneCents ? targetDetuneCents[baseNote] : detuneCents[baseNote];
-          const targetFreq = detuneFrequency(BASE_FREQUENCIES[note], detuneValue);
+          if (detuneValue === undefined) {
+            console.warn(`Detune value for note ${baseNote} is undefined`);
+            return; // Skip this note
+          }
+
+          const baseFrequency = BASE_FREQUENCIES[note];
+          if (baseFrequency === undefined) {
+            console.warn(`Base frequency for note ${note} is undefined`);
+            return; // Skip this note
+          }
+
+          const targetFreq = detuneFrequency(baseFrequency, detuneValue);
 
           // For new oscillators, we always set the initial frequency immediately
           // but we can schedule a transition if needed
