@@ -69,6 +69,56 @@ const calculateCentsDifference = (ratio: number, semitones: number): number => {
   return justIntonationCents - equalTemperamentCents;
 };
 
+// Helper function to check if a note is active
+const isNoteActive = (note: string, activeNotes: Record<string, boolean>): boolean =>
+  Boolean(activeNotes[note]);
+
+// Helper function to find the lowest active note
+const findLowestActiveNote = (noteNames: string[], activeNotes: Record<string, boolean>) => {
+  // First check base notes
+  for (let i = 0; i < noteNames.length; i++) {
+    const note = noteNames[i];
+    if (note !== undefined && isNoteActive(note, activeNotes)) {
+      return { index: i, isOctave: false };
+    }
+  }
+
+  // Then check octave notes
+  for (let i = 0; i < noteNames.length; i++) {
+    const note = noteNames[i];
+    if (note !== undefined && isNoteActive(note + "'", activeNotes)) {
+      return { index: i, isOctave: true };
+    }
+  }
+
+  return null; // No active notes found
+};
+
+// Helper function to find the best matching interval
+const findBestMatchingInterval = (semitones: number, intervals: typeof INTERVALS) => {
+  // Convert intervals to array for easier processing
+  const intervalsArray = Object.entries(intervals).map(([name, data]) => ({
+    name,
+    ...data
+  }));
+
+  // Try to find exact match first (using modulo 12 to handle octaves)
+  const exactMatch = intervalsArray.find(interval =>
+    interval.semitones === semitones % 12
+  );
+
+  if (exactMatch) return exactMatch.ratio;
+
+  // Find closest match if no exact match found
+  return intervalsArray
+    .reduce((closest, current) => {
+      const currentDiff = Math.abs(current.semitones - semitones);
+      const closestDiff = Math.abs(closest.semitones - semitones);
+
+      return currentDiff < closestDiff ? current : closest;
+    }).ratio;
+};
+
 export default function BeatFreeIntervals() {
   const initialDetunes = initializeDetuneCents(NOTE_NAMES);
   const NOTES = NOTE_NAMES.concat(NOTE_NAMES.map((n) => n + "'")).flat();
@@ -113,111 +163,38 @@ export default function BeatFreeIntervals() {
     // Ensure this is not treated as a slider adjustment
     setIsSliderAdjustment(false);
 
-    // Keep the current active notes
-    const currentActiveNotes = { ...activeNotes };
-
-    // Find the lowest active note (considering both base notes and octave notes)
-    let lowestNoteIndex = -1;
-    let lowestNoteIsOctave = false;
-
-    // First check base notes
-    for (let i = 0; i < NOTE_NAMES.length; i++) {
-      const noteKey = NOTE_NAMES[i];
-      // noteKey is guaranteed to be a string from NOTE_NAMES array
-      if (
-        noteKey &&
-        noteKey in currentActiveNotes &&
-        currentActiveNotes[noteKey] === true
-      ) {
-        lowestNoteIndex = i;
-        lowestNoteIsOctave = false;
-        break;
-      }
-    }
-
-    // If no base note is active, check octave notes
-    if (lowestNoteIndex === -1) {
-      for (let i = 0; i < NOTE_NAMES.length; i++) {
-        const noteKey = NOTE_NAMES[i] + "'";
-        // noteKey is guaranteed to be a string from NOTE_NAMES array + "'"
-        if (
-          noteKey &&
-          noteKey in currentActiveNotes &&
-          currentActiveNotes[noteKey] === true
-        ) {
-          lowestNoteIndex = i;
-          lowestNoteIsOctave = true;
-          break;
-        }
-      }
-    }
-
-    // If no active notes, do nothing
-    if (lowestNoteIndex === -1) return;
+    // Find the lowest active note
+    const lowestNote = findLowestActiveNote(NOTE_NAMES, activeNotes);
+    if (!lowestNote) return; // No active notes, do nothing
 
     // Create new detune cents object starting with current values
-    // This ensures inactive notes keep their current values
     const newDetuneCents = { ...detuneCents };
 
-    // For each note (both base and octave), calculate the beat-free interval based on its distance from the lowest note
-    for (let i = 0; i < NOTE_NAMES.length; i++) {
-      const baseNote = NOTE_NAMES[i];
+    // Calculate beat-free intervals for each note
+    NOTE_NAMES.forEach((baseNote, i) => {
       const octaveNote = baseNote + "'";
+      const isBaseActive = isNoteActive(baseNote, activeNotes);
+      const isOctaveActive = isNoteActive(octaveNote, activeNotes);
 
       // Skip notes that are not active in either octave
-      // baseNote is guaranteed to be a string from NOTE_NAMES array
-      const isBaseNoteActive =
-        baseNote &&
-        baseNote in currentActiveNotes &&
-        currentActiveNotes[baseNote] === true;
-      // octaveNote is guaranteed to be a string from NOTE_NAMES array + "'"
-      const isOctaveNoteActive =
-        octaveNote &&
-        octaveNote in currentActiveNotes &&
-        currentActiveNotes[octaveNote] === true;
-
-      if (!isBaseNoteActive && !isOctaveNoteActive) continue;
+      if (!isBaseActive && !isOctaveActive) return;
 
       // Skip the lowest note (it's our reference)
-      if (i === lowestNoteIndex && (!lowestNoteIsOctave || !isBaseNoteActive))
-        continue;
+      if (i === lowestNote.index && (!lowestNote.isOctave || !isBaseActive)) return;
 
       // Calculate semitone distance from lowest note
-      let semitones = i - lowestNoteIndex;
+      let semitones = i - lowestNote.index;
       if (semitones < 0) semitones += 12; // Wrap around for notes below the lowest
 
-      // Find the closest just intonation interval
-      let bestRatio = 1;
-      let smallestDifference = Infinity;
-
-      // Check all intervals to find the one that best matches this semitone distance
-      for (const intervalName in INTERVALS) {
-        if (Object.hasOwn(INTERVALS, intervalName)) {
-          const interval = INTERVALS[intervalName as IntervalName];
-          if (interval.semitones === semitones % 12) {
-            // Exact match found
-            bestRatio = interval.ratio;
-            break;
-          }
-
-          // Calculate how close this interval is to the desired semitone distance
-          const difference = Math.abs(interval.semitones - semitones);
-          if (difference < smallestDifference) {
-            smallestDifference = difference;
-            bestRatio = interval.ratio;
-          }
-        }
-      }
-
-      // Calculate the cent difference for this note
+      // Find the best matching interval and calculate cents difference
+      const bestRatio = findBestMatchingInterval(semitones, INTERVALS);
       const centsDifference = calculateCentsDifference(bestRatio, semitones);
 
       // Update the detune cents for the base note
-      // baseNote is defined here because it comes from NOTE_NAMES[i]
-      if (typeof baseNote === "string" && baseNote in newDetuneCents) {
+      if (baseNote in newDetuneCents) {
         newDetuneCents[baseNote] = centsDifference;
       }
-    }
+    });
 
     // Set the target values to trigger animation
     setTargetDetuneCents(newDetuneCents);
