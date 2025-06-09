@@ -8,6 +8,7 @@ import {
   initializeDetuneCents,
   initializeActiveNotes,
 } from "@/utils/noteUtils";
+import { Play, Pause, Music, Equal, RefreshCcw } from "lucide-react";
 
 const NOTE_NAMES = [
   "C",
@@ -424,11 +425,21 @@ export default function BeatFreeIntervals() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex flex-wrap items-end gap-2">
             <Button onClick={togglePlayback}>
+              {isPlaying ? <Pause /> : <Play />}
               {isPlaying ? "Stop" : "Play"}
             </Button>
-            <Button onClick={tuneBeatFree}>Tune Beat-Free</Button>
-            <Button onClick={resetPitches}>Equal temperament</Button>
-            <Button onClick={resetAll} variant="destructive">Reset All</Button>
+            <Button onClick={tuneBeatFree}>
+              <Music />
+              Tune Beat-Free
+            </Button>
+            <Button onClick={resetPitches}>
+              <Equal />
+              Equal temperament
+            </Button>
+            <Button onClick={resetAll} variant="destructive">
+              <RefreshCcw />
+              Reset All
+            </Button>
           </div>
         </div>
 

@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -62,6 +63,7 @@ export default function LandingPage() {
           <Link to="/beat-free-intervals">
             <Button className="text-lg px-6 py-3 w-full md:w-auto">
               Explore Beat-Free Intervals
+              <ArrowRight />
             </Button>
           </Link>
         </div>
