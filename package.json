@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "homepage": "https://github.com/szabyg/clear-chord.git",
   "scripts": {
+    "type-checking:watch": "tsc --noEmit --watch",
     "type-checking": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build",

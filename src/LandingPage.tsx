@@ -6,10 +6,12 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
       <div className="max-w-4xl space-y-6">
-        <h1 className="text-4xl font-bold">Welcome to ClearChord</h1>
-        <p className="text-xl">
-          A simple tool to help you tune and experiment with musical tones.
-        </p>
+        <div className="flex flex-col items-center mb-4">
+          <h1 className="text-4xl font-bold">Welcome to ClearChord</h1>
+          <p className="text-xl">
+            A simple tool to help you tune and experiment with musical tones.
+          </p>
+        </div>
 
         <div className="mt-6 bg-gray-50 p-6 rounded-lg text-left">
           <h2 className="text-2xl font-semibold mb-3">
@@ -81,6 +83,14 @@ export default function LandingPage() {
           </ul>
         </div>
       </div>
+      <footer className="mt-8 py-4 border-t w-full text-center text-gray-600">
+        <div className="flex justify-center items-center gap-2 mb-2">
+          <a href="https://github.com/szabyg/clear-chord" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+            GitHub
+          </a>
+        </div>
+        <div>Author: Szabolcs Grünwald</div>
+      </footer>
     </div>
   );
 }

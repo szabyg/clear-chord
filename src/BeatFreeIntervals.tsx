@@ -398,11 +398,11 @@ export default function BeatFreeIntervals() {
   };
 
   return (
-    <div className="flex justify-center w-full">
+    <div className="flex flex-col items-center w-full">
       <div className="w-full max-w-4xl p-4 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Beat-Free Intervals</h1>
-          <Link to="/" className="text-blue-600 hover:underline">
+          <Link to="/" className="hover:opacity-80">
             Back to Home
           </Link>
         </div>
@@ -496,6 +496,14 @@ export default function BeatFreeIntervals() {
           </div>
         ))}
       </div>
+      <footer className="mt-8 py-4 border-t w-full text-center text-gray-600">
+        <div className="flex justify-center items-center gap-2 mb-2">
+          <a href="https://github.com/szabyg/clear-chord" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+            GitHub
+          </a>
+        </div>
+        <div>Author: Szabolcs Grünwald</div>
+      </footer>
     </div>
   );
 }
