@@ -390,6 +390,27 @@ export default function BeatFreeIntervals() {
     setIsPlaying(!isPlaying);
   };
 
+  const resetAll = () => {
+    // Stop any playing sound
+    setIsPlaying(false);
+
+    // Reset all sliders to their default values
+    setDetuneCents(initialDetunes);
+    setTargetDetuneCents(initialDetunes);
+
+    // Reset all active notes to their default state
+    setActiveNotes(initialActives);
+
+    // Ensure this is not treated as a slider adjustment
+    setIsSliderAdjustment(false);
+
+    // Cancel any existing animation
+    if (animationRef.current !== null) {
+      cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+  };
+
   return (
     <div className="flex justify-center w-full">
       <div className="w-full max-w-4xl p-4 space-y-6">
@@ -407,6 +428,7 @@ export default function BeatFreeIntervals() {
             </Button>
             <Button onClick={tuneBeatFree}>Tune Beat-Free</Button>
             <Button onClick={resetPitches}>Equal temperament</Button>
+            <Button onClick={resetAll} variant="destructive">Reset All</Button>
           </div>
         </div>
 

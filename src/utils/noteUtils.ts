@@ -16,7 +16,7 @@ export function initializeActiveNotes(
   return notes.reduce(
     (acc, note) => {
       // Set C and E as active by default
-      acc[note] = note === "C" || note === "E" || note === "C'" || note === "E'";
+      acc[note] = note === "C" || note === "E" || note === "G";
       return acc;
     },
     {} as Record<string, boolean>
