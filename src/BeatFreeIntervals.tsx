@@ -151,10 +151,15 @@ export default function BeatFreeIntervals() {
       const octaveNote = baseNote + "'";
 
       // Skip notes that are not active in either octave
-      if (!currentActiveNotes[baseNote] && !currentActiveNotes[octaveNote]) continue;
+      if (!currentActiveNotes[baseNote] && !currentActiveNotes[octaveNote])
+        continue;
 
       // Skip the lowest note (it's our reference)
-      if (i === lowestNoteIndex && (!lowestNoteIsOctave || !currentActiveNotes[baseNote])) continue;
+      if (
+        i === lowestNoteIndex &&
+        (!lowestNoteIsOctave || !currentActiveNotes[baseNote])
+      )
+        continue;
 
       // Calculate semitone distance from lowest note
       let semitones = i - lowestNoteIndex;
@@ -317,8 +322,10 @@ export default function BeatFreeIntervals() {
       const octaveNote = note + "'";
 
       // Check if either the base note or its octave is active
-      if ((activeNotes[note] || activeNotes[octaveNote]) &&
-          detuneCents[note] !== targetDetuneCents[note]) {
+      if (
+        (activeNotes[note] || activeNotes[octaveNote]) &&
+        detuneCents[note] !== targetDetuneCents[note]
+      ) {
         needsAnimation = true;
         break;
       }
@@ -372,12 +379,21 @@ export default function BeatFreeIntervals() {
 
         {NOTES.map((note) => (
           <div key={note} className="space-y-2">
-            <label
-              className={`block font-medium cursor-pointer ${activeNotes[note] ? "text-black" : "text-gray-400"}`}
-              onClick={() => toggleNote(note)}
-            >
-              {note} : {detuneCents[note.replace("'", "")].toFixed(2)} cents
-            </label>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={activeNotes[note] ? "default" : "outline"}
+                size="sm"
+                onClick={() => toggleNote(note)}
+                className={`min-w-[40px] h-6 px-2 text-xs rounded-full ${
+                  activeNotes[note] ? "bg-green-500 hover:bg-green-600" : ""
+                }`}
+              >
+                {note}
+              </Button>
+              <span className="font-medium">
+                {detuneCents[note.replace("'", "")].toFixed(2)} cents
+              </span>
+            </div>
             <Slider
               min={-50.0}
               max={50.0}
