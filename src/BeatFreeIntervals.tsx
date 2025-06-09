@@ -354,7 +354,7 @@ export default function BeatFreeIntervals() {
               className={`block font-medium cursor-pointer ${activeNotes[note] || activeNotes[note + "'"] ? "text-black" : "text-gray-400"}`}
               onClick={() => toggleNote(note)}
             >
-              {note} : {detuneCents[note]} cents
+              {note} : {detuneCents[note].toFixed(2)} cents
             </label>
             <Slider
               min={-50.0}
