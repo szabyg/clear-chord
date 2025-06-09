@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 export default defineConfig({
-  base: "/triad-tuner/",
+  base: "/clear-chord/",
   plugins: [react(), tailwindcss()],
   server: {
     historyApiFallback: true,

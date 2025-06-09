@@ -1,12 +1,13 @@
 {
-  "name": "triad-tuner",
+  "name": "clear-chord",
   "version": "0.0.0",
+  "homepage": "https://github.com/szabyg/clear-chord.git",
   "scripts": {
     "type-checking": "tsc --noEmit",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && gh-pages -d dist -r https://github.com/szabyg/triad-tuner.git",
+    "deploy": "npm run build && gh-pages -d dist -r https://github.com/szabyg/clear-chord.git",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

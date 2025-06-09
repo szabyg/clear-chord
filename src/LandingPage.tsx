@@ -6,7 +6,7 @@ export default function LandingPage() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-4 text-center">
       <div className="max-w-4xl space-y-6">
-        <h1 className="text-4xl font-bold">Welcome to Tone Tuner</h1>
+        <h1 className="text-4xl font-bold">Welcome to ClearChord</h1>
         <p className="text-xl">
           A simple tool to help you tune and experiment with musical tones.
         </p>
