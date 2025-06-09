@@ -112,13 +112,29 @@ export default function BeatFreeIntervals() {
     // Keep the current active notes
     const currentActiveNotes = { ...activeNotes };
 
-    // Find the lowest active note
+    // Find the lowest active note (considering both base notes and octave notes)
     let lowestNoteIndex = -1;
+    let lowestNoteIsOctave = false;
+
+    // First check base notes
     for (let i = 0; i < NOTE_NAMES.length; i++) {
       const note = NOTE_NAMES[i];
-      if (currentActiveNotes[note] || currentActiveNotes[note + "'"]) {
+      if (currentActiveNotes[note]) {
         lowestNoteIndex = i;
+        lowestNoteIsOctave = false;
         break;
+      }
+    }
+
+    // If no base note is active, check octave notes
+    if (lowestNoteIndex === -1) {
+      for (let i = 0; i < NOTE_NAMES.length; i++) {
+        const note = NOTE_NAMES[i] + "'";
+        if (currentActiveNotes[note]) {
+          lowestNoteIndex = i;
+          lowestNoteIsOctave = true;
+          break;
+        }
       }
     }
 
@@ -129,16 +145,16 @@ export default function BeatFreeIntervals() {
     // This ensures inactive notes keep their current values
     const newDetuneCents = { ...detuneCents };
 
-    // For each active note, calculate the beat-free interval based on its distance from the lowest note
+    // For each note (both base and octave), calculate the beat-free interval based on its distance from the lowest note
     for (let i = 0; i < NOTE_NAMES.length; i++) {
-      const note = NOTE_NAMES[i];
+      const baseNote = NOTE_NAMES[i];
+      const octaveNote = baseNote + "'";
 
-      // Skip inactive notes
-      if (!currentActiveNotes[note] && !currentActiveNotes[note + "'"])
-        continue;
+      // Skip notes that are not active in either octave
+      if (!currentActiveNotes[baseNote] && !currentActiveNotes[octaveNote]) continue;
 
       // Skip the lowest note (it's our reference)
-      if (i === lowestNoteIndex) continue;
+      if (i === lowestNoteIndex && (!lowestNoteIsOctave || !currentActiveNotes[baseNote])) continue;
 
       // Calculate semitone distance from lowest note
       let semitones = i - lowestNoteIndex;
@@ -152,7 +168,7 @@ export default function BeatFreeIntervals() {
       for (const intervalName in INTERVALS) {
         if (Object.hasOwn(INTERVALS, intervalName)) {
           const interval = INTERVALS[intervalName as IntervalName];
-          if (interval.semitones === semitones) {
+          if (interval.semitones === semitones % 12) {
             // Exact match found
             bestRatio = interval.ratio;
             break;
@@ -170,8 +186,8 @@ export default function BeatFreeIntervals() {
       // Calculate the cent difference for this note
       const centsDifference = calculateCentsDifference(bestRatio, semitones);
 
-      // Update the detune cents for this note
-      newDetuneCents[note] = centsDifference;
+      // Update the detune cents for the base note
+      newDetuneCents[baseNote] = centsDifference;
     }
 
     // Set the target values to trigger animation
@@ -185,8 +201,13 @@ export default function BeatFreeIntervals() {
     // Create new detune cents object starting with initialDetunes
     // but keeping current values for inactive notes
     const newDetuneCents = { ...initialDetunes };
+
+    // Process base notes
     for (const note of NOTE_NAMES) {
-      if (!activeNotes[note] && !activeNotes[note + "'"]) {
+      const octaveNote = note + "'";
+
+      // If neither the base note nor its octave is active, keep the current value
+      if (!activeNotes[note] && !activeNotes[octaveNote]) {
         newDetuneCents[note] = detuneCents[note];
       }
     }
@@ -269,8 +290,10 @@ export default function BeatFreeIntervals() {
       // Calculate intermediate values for each note
       const newDetuneCents = { ...detuneCents };
       for (const note of NOTE_NAMES) {
-        // Skip inactive notes - don't animate them
-        if (!activeNotes[note] && !activeNotes[note + "'"]) {
+        const octaveNote = note + "'";
+
+        // Skip notes that are not active in either octave
+        if (!activeNotes[note] && !activeNotes[octaveNote]) {
           newDetuneCents[note] = detuneCents[note];
           continue;
         }
@@ -291,11 +314,11 @@ export default function BeatFreeIntervals() {
     // Only start animation if target values are different from current values for active notes
     let needsAnimation = false;
     for (const note of NOTE_NAMES) {
-      // Only check active notes
-      if (
-        (activeNotes[note] || activeNotes[note + "'"]) &&
-        detuneCents[note] !== targetDetuneCents[note]
-      ) {
+      const octaveNote = note + "'";
+
+      // Check if either the base note or its octave is active
+      if ((activeNotes[note] || activeNotes[octaveNote]) &&
+          detuneCents[note] !== targetDetuneCents[note]) {
         needsAnimation = true;
         break;
       }
@@ -320,7 +343,6 @@ export default function BeatFreeIntervals() {
     setActiveNotes((prev) => ({
       ...prev,
       [note]: !prev[note],
-      [note + "'"]: !prev[note + "'"],
     }));
   };
 
@@ -348,26 +370,27 @@ export default function BeatFreeIntervals() {
           </div>
         </div>
 
-        {NOTE_NAMES.map((note) => (
+        {NOTES.map((note) => (
           <div key={note} className="space-y-2">
             <label
-              className={`block font-medium cursor-pointer ${activeNotes[note] || activeNotes[note + "'"] ? "text-black" : "text-gray-400"}`}
+              className={`block font-medium cursor-pointer ${activeNotes[note] ? "text-black" : "text-gray-400"}`}
               onClick={() => toggleNote(note)}
             >
-              {note} : {detuneCents[note].toFixed(2)} cents
+              {note} : {detuneCents[note.replace("'", "")].toFixed(2)} cents
             </label>
             <Slider
               min={-50.0}
               max={50.0}
               step={0.1}
-              value={[detuneCents[note]]}
-              disabled={!(activeNotes[note] || activeNotes[note + "'"])}
+              value={[detuneCents[note.replace("'", "")]]}
+              disabled={!activeNotes[note]}
               onValueChange={([val]) => {
                 // Set flag for immediate update
                 setIsSliderAdjustment(true);
 
                 // Update both current and target values for manual adjustments
-                const newValue = { ...detuneCents, [note]: val };
+                const baseNote = note.replace("'", "");
+                const newValue = { ...detuneCents, [baseNote]: val };
                 setDetuneCents(newValue);
                 setTargetDetuneCents(newValue);
 
