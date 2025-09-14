@@ -9,8 +9,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter basename="/clear-chord/">
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/beat-free-intervals" element={<BeatFreeIntervals />} />
+        <Route path="/" element={<BeatFreeIntervals />} />
+        <Route path="/info" element={<LandingPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

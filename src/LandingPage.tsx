@@ -62,7 +62,7 @@ export default function LandingPage() {
         </div>
 
         <div className="py-4 flex flex-col md:flex-row gap-4 justify-center">
-          <Link to="/beat-free-intervals">
+          <Link to="/">
             <Button className="text-lg px-6 py-3 w-full md:w-auto">
               Explore Beat-Free Intervals
               <ArrowRight />

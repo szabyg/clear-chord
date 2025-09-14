@@ -8,7 +8,7 @@ import {
   initializeDetuneCents,
   initializeActiveNotes,
 } from "@/utils/noteUtils";
-import { Play, Pause, Music, Equal, RefreshCcw, ChevronDown, ChevronUp } from "lucide-react";
+import { Play, Pause, Music, Equal, RefreshCcw, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
 
 const NOTE_NAMES = [
   "C",
@@ -402,8 +402,9 @@ export default function BeatFreeIntervals() {
       <div className="w-full max-w-4xl p-4 space-y-6">
         <div className="flex justify-between items-center">
           <h1 className="text-2xl font-bold">Beat-Free Intervals</h1>
-          <Link to="/" className="hover:opacity-80">
-            Back to Home
+          <Link to="/info" className="flex items-center gap-1 hover:opacity-80">
+            <HelpCircle size={18} />
+            <span>Info</span>
           </Link>
         </div>
 
