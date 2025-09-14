@@ -140,6 +140,7 @@ export default function BeatFreeIntervals() {
     "beatFreeShowSecondOctave",
     false
   );
+  const [noteRatios, setNoteRatios] = useState<Record<string, string>>({});
   const animationRef = useRef<number | null>(null);
 
   // Flag to prevent animation on initial load
@@ -169,6 +170,8 @@ export default function BeatFreeIntervals() {
 
     // Create new detune cents object starting with current values
     const newDetuneCents = { ...detuneCents };
+    // Create new note ratios object
+    const newNoteRatios: Record<string, string> = {};
 
     // Calculate beat-free intervals for each note
     NOTE_NAMES.forEach((baseNote, i) => {
@@ -190,6 +193,40 @@ export default function BeatFreeIntervals() {
       const bestRatio = findBestMatchingInterval(semitones, INTERVALS);
       const centsDifference = calculateCentsDifference(bestRatio, semitones);
 
+      // Find the interval name and ratio for display
+      const intervalEntry = Object.entries(INTERVALS).find(
+        ([_, data]) => Math.abs(data.ratio - bestRatio) < 0.0001
+      );
+
+      if (intervalEntry) {
+        // Get the ratio as a fraction string (e.g., "3/2")
+        const [_, data] = intervalEntry;
+        const ratioStr = data.ratio.toString();
+
+        // Convert decimal to fraction if possible
+        let fractionStr = "";
+        if (ratioStr.includes(".")) {
+          // For common ratios, manually set the fraction
+          if (Math.abs(data.ratio - 3/2) < 0.0001) fractionStr = "3/2";
+          else if (Math.abs(data.ratio - 5/4) < 0.0001) fractionStr = "5/4";
+          else if (Math.abs(data.ratio - 4/3) < 0.0001) fractionStr = "4/3";
+          else if (Math.abs(data.ratio - 9/8) < 0.0001) fractionStr = "9/8";
+          else if (Math.abs(data.ratio - 6/5) < 0.0001) fractionStr = "6/5";
+          else if (Math.abs(data.ratio - 5/3) < 0.0001) fractionStr = "5/3";
+          else if (Math.abs(data.ratio - 8/5) < 0.0001) fractionStr = "8/5";
+          else if (Math.abs(data.ratio - 16/9) < 0.0001) fractionStr = "16/9";
+          else if (Math.abs(data.ratio - 15/8) < 0.0001) fractionStr = "15/8";
+          else if (Math.abs(data.ratio - 2/1) < 0.0001) fractionStr = "2/1";
+          else if (Math.abs(data.ratio - 16/15) < 0.0001) fractionStr = "16/15";
+          else if (Math.abs(data.ratio - 45/32) < 0.0001) fractionStr = "45/32";
+        } else {
+          fractionStr = ratioStr;
+        }
+
+        // Store the ratio string for this note
+        newNoteRatios[baseNote] = fractionStr;
+      }
+
       // Update the detune cents for the base note
       if (baseNote in newDetuneCents) {
         newDetuneCents[baseNote] = centsDifference;
@@ -198,6 +235,8 @@ export default function BeatFreeIntervals() {
 
     // Set the target values to trigger animation
     setTargetDetuneCents(newDetuneCents);
+    // Update note ratios
+    setNoteRatios(newNoteRatios);
   };
 
   const resetPitches = () => {
@@ -223,6 +262,9 @@ export default function BeatFreeIntervals() {
 
     // Set the target values to trigger animation
     setTargetDetuneCents(newDetuneCents);
+
+    // Clear note ratios
+    setNoteRatios({});
   };
 
   useEffect(() => {
@@ -387,6 +429,9 @@ export default function BeatFreeIntervals() {
     // Reset all active notes to their default state
     setActiveNotes(initialActives);
 
+    // Clear note ratios
+    setNoteRatios({});
+
     // Ensure this is not treated as a slider adjustment
     setIsSliderAdjustment(false);
 
@@ -448,6 +493,7 @@ export default function BeatFreeIntervals() {
               </Button>
               <span className="font-medium">
                 {(detuneCents[note.replace("'", "")] ?? 0).toFixed(2)} cents
+                {noteRatios[note.replace("'", "")] && ` (${noteRatios[note.replace("'", "")]})`}
               </span>
             </div>
             <Slider
