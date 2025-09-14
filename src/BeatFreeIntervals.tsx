@@ -8,7 +8,16 @@ import {
   initializeDetuneCents,
   initializeActiveNotes,
 } from "@/utils/noteUtils";
-import { Play, Pause, Music, Equal, RefreshCcw, ChevronDown, ChevronUp, HelpCircle } from "lucide-react";
+import {
+  Play,
+  Pause,
+  Music,
+  Equal,
+  RefreshCcw,
+  ChevronDown,
+  ChevronUp,
+  HelpCircle,
+} from "lucide-react";
 
 const NOTE_NAMES = [
   "C",
@@ -70,11 +79,16 @@ const calculateCentsDifference = (ratio: number, semitones: number): number => {
 };
 
 // Helper function to check if a note is active
-const isNoteActive = (note: string, activeNotes: Record<string, boolean>): boolean =>
-  Boolean(activeNotes[note]);
+const isNoteActive = (
+  note: string,
+  activeNotes: Record<string, boolean>
+): boolean => Boolean(activeNotes[note]);
 
 // Helper function to find the lowest active note
-const findLowestActiveNote = (noteNames: string[], activeNotes: Record<string, boolean>) => {
+const findLowestActiveNote = (
+  noteNames: string[],
+  activeNotes: Record<string, boolean>
+) => {
   // First check base notes
   for (let i = 0; i < noteNames.length; i++) {
     const note = noteNames[i];
@@ -95,28 +109,54 @@ const findLowestActiveNote = (noteNames: string[], activeNotes: Record<string, b
 };
 
 // Helper function to find the best matching interval
-const findBestMatchingInterval = (semitones: number, intervals: typeof INTERVALS) => {
+const findBestMatchingInterval = (
+  semitones: number,
+  intervals: typeof INTERVALS
+) => {
   // Convert intervals to array for easier processing
   const intervalsArray = Object.entries(intervals).map(([name, data]) => ({
     name,
-    ...data
+    ...data,
   }));
 
   // Try to find exact match first (using modulo 12 to handle octaves)
-  const exactMatch = intervalsArray.find(interval =>
-    interval.semitones === semitones % 12
+  const exactMatch = intervalsArray.find(
+    (interval) => interval.semitones === semitones % 12
   );
 
   if (exactMatch) return exactMatch.ratio;
 
   // Find closest match if no exact match found
-  return intervalsArray
-    .reduce((closest, current) => {
-      const currentDiff = Math.abs(current.semitones - semitones);
-      const closestDiff = Math.abs(closest.semitones - semitones);
+  return intervalsArray.reduce((closest, current) => {
+    const currentDiff = Math.abs(current.semitones - semitones);
+    const closestDiff = Math.abs(closest.semitones - semitones);
 
-      return currentDiff < closestDiff ? current : closest;
-    }).ratio;
+    return currentDiff < closestDiff ? current : closest;
+  }).ratio;
+};
+
+// Helper function to convert ratio to fraction string
+const getRatioFractionString = (ratio: number): string => {
+  const ratioStr = ratio.toString();
+
+  // Convert decimal to fraction if possible
+  if (ratioStr.includes(".")) {
+    // For common ratios, manually set the fraction
+    if (Math.abs(ratio - 3 / 2) < 0.0001) return "3/2";
+    if (Math.abs(ratio - 5 / 4) < 0.0001) return "5/4";
+    if (Math.abs(ratio - 4 / 3) < 0.0001) return "4/3";
+    if (Math.abs(ratio - 9 / 8) < 0.0001) return "9/8";
+    if (Math.abs(ratio - 6 / 5) < 0.0001) return "6/5";
+    if (Math.abs(ratio - 5 / 3) < 0.0001) return "5/3";
+    if (Math.abs(ratio - 8 / 5) < 0.0001) return "8/5";
+    if (Math.abs(ratio - 16 / 9) < 0.0001) return "16/9";
+    if (Math.abs(ratio - 15 / 8) < 0.0001) return "15/8";
+    if (Math.abs(ratio - 2 / 1) < 0.0001) return "2/1";
+    if (Math.abs(ratio - 16 / 15) < 0.0001) return "16/15";
+    if (Math.abs(ratio - 45 / 32) < 0.0001) return "45/32";
+  }
+
+  return ratioStr;
 };
 
 export default function BeatFreeIntervals() {
@@ -183,7 +223,8 @@ export default function BeatFreeIntervals() {
       if (!isBaseActive && !isOctaveActive) return;
 
       // Skip the lowest note (it's our reference)
-      if (i === lowestNote.index && (!lowestNote.isOctave || !isBaseActive)) return;
+      if (i === lowestNote.index && (!lowestNote.isOctave || !isBaseActive))
+        return;
 
       // Calculate semitone distance from lowest note
       let semitones = i - lowestNote.index;
@@ -193,38 +234,17 @@ export default function BeatFreeIntervals() {
       const bestRatio = findBestMatchingInterval(semitones, INTERVALS);
       const centsDifference = calculateCentsDifference(bestRatio, semitones);
 
-      // Find the interval name and ratio for display
+      // Find the interval entry that matches the best ratio
       const intervalEntry = Object.entries(INTERVALS).find(
         ([_, data]) => Math.abs(data.ratio - bestRatio) < 0.0001
       );
 
       if (intervalEntry) {
-        // Get the ratio as a fraction string (e.g., "3/2")
+        // Get the ratio from the interval entry
         const [_, data] = intervalEntry;
-        const ratioStr = data.ratio.toString();
 
-        // Convert decimal to fraction if possible
-        let fractionStr = "";
-        if (ratioStr.includes(".")) {
-          // For common ratios, manually set the fraction
-          if (Math.abs(data.ratio - 3/2) < 0.0001) fractionStr = "3/2";
-          else if (Math.abs(data.ratio - 5/4) < 0.0001) fractionStr = "5/4";
-          else if (Math.abs(data.ratio - 4/3) < 0.0001) fractionStr = "4/3";
-          else if (Math.abs(data.ratio - 9/8) < 0.0001) fractionStr = "9/8";
-          else if (Math.abs(data.ratio - 6/5) < 0.0001) fractionStr = "6/5";
-          else if (Math.abs(data.ratio - 5/3) < 0.0001) fractionStr = "5/3";
-          else if (Math.abs(data.ratio - 8/5) < 0.0001) fractionStr = "8/5";
-          else if (Math.abs(data.ratio - 16/9) < 0.0001) fractionStr = "16/9";
-          else if (Math.abs(data.ratio - 15/8) < 0.0001) fractionStr = "15/8";
-          else if (Math.abs(data.ratio - 2/1) < 0.0001) fractionStr = "2/1";
-          else if (Math.abs(data.ratio - 16/15) < 0.0001) fractionStr = "16/15";
-          else if (Math.abs(data.ratio - 45/32) < 0.0001) fractionStr = "45/32";
-        } else {
-          fractionStr = ratioStr;
-        }
-
-        // Store the ratio string for this note
-        newNoteRatios[baseNote] = fractionStr;
+        // Convert the ratio to a fraction string and store it
+        newNoteRatios[baseNote] = getRatioFractionString(data.ratio);
       }
 
       // Update the detune cents for the base note
@@ -408,6 +428,9 @@ export default function BeatFreeIntervals() {
       ...prev,
       [note]: !prev[note],
     }));
+
+    // Clear note ratios when a note is toggled
+    setNoteRatios({});
   };
 
   const togglePlayback = () => {
@@ -478,74 +501,85 @@ export default function BeatFreeIntervals() {
           </div>
         </div>
 
-        {NOTES.filter(note => !note.includes("'") || showSecondOctave).map((note) => (
-          <div key={note} className="space-y-2">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={activeNotes[note] ? "default" : "outline"}
-                size="sm"
-                onClick={() => toggleNote(note)}
-                className={`min-w-[40px] h-6 px-2 text-xs rounded-full ${
-                  activeNotes[note] ? "bg-green-500 hover:bg-green-600" : ""
-                }`}
-              >
-                {note}
-              </Button>
-              <span className="font-medium">
-                {(detuneCents[note.replace("'", "")] ?? 0).toFixed(2)} cents
-                {noteRatios[note.replace("'", "")] && ` (${noteRatios[note.replace("'", "")]})`}
-              </span>
+        {NOTES.filter((note) => !note.includes("'") || showSecondOctave).map(
+          (note) => (
+            <div key={note} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={activeNotes[note] ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleNote(note)}
+                  className={`min-w-[40px] h-6 px-2 text-xs rounded-full ${
+                    activeNotes[note] ? "bg-green-500 hover:bg-green-600" : ""
+                  }`}
+                >
+                  {note}
+                </Button>
+                <span className="font-medium">
+                  {(detuneCents[note.replace("'", "")] ?? 0).toFixed(2)} cents
+                  {noteRatios[note.replace("'", "")] &&
+                    ` (${noteRatios[note.replace("'", "")]})`}
+                </span>
+              </div>
+              <Slider
+                min={-50.0}
+                max={50.0}
+                step={0.1}
+                value={[detuneCents[note.replace("'", "")] ?? 0]}
+                disabled={activeNotes[note] !== true}
+                onValueChange={([val]) => {
+                  // Set flag for immediate update
+                  setIsSliderAdjustment(true);
+
+                  // Update both current and target values for manual adjustments
+                  const baseNote = note.replace("'", "");
+
+                  // Create type-safe copies of the state
+                  const newDetuneCents = { ...detuneCents };
+                  const newTargetDetuneCents = { ...targetDetuneCents };
+
+                  // Safely update the values
+                  if (
+                    typeof baseNote === "string" &&
+                    baseNote in newDetuneCents
+                  ) {
+                    // val is a number from the slider, so it's safe to assign
+                    newDetuneCents[baseNote] = val as number;
+                  }
+
+                  if (
+                    typeof baseNote === "string" &&
+                    baseNote in newTargetDetuneCents
+                  ) {
+                    // val is a number from the slider, so it's safe to assign
+                    newTargetDetuneCents[baseNote] = val as number;
+                  }
+
+                  // Update state
+                  setDetuneCents(newDetuneCents);
+                  setTargetDetuneCents(newTargetDetuneCents);
+
+                  // Clear note ratios when a note is manually changed
+                  setNoteRatios({});
+
+                  // Reset flag after a short delay to ensure the update has been processed
+                  setTimeout(() => {
+                    setIsSliderAdjustment(false);
+                  }, 50);
+                }}
+              />
             </div>
-            <Slider
-              min={-50.0}
-              max={50.0}
-              step={0.1}
-              value={[detuneCents[note.replace("'", "")] ?? 0]}
-              disabled={activeNotes[note] !== true}
-              onValueChange={([val]) => {
-                // Set flag for immediate update
-                setIsSliderAdjustment(true);
-
-                // Update both current and target values for manual adjustments
-                const baseNote = note.replace("'", "");
-
-                // Create type-safe copies of the state
-                const newDetuneCents = { ...detuneCents };
-                const newTargetDetuneCents = { ...targetDetuneCents };
-
-                // Safely update the values
-                if (
-                  typeof baseNote === "string" &&
-                  baseNote in newDetuneCents
-                ) {
-                  // val is a number from the slider, so it's safe to assign
-                  newDetuneCents[baseNote] = val as number;
-                }
-
-                if (
-                  typeof baseNote === "string" &&
-                  baseNote in newTargetDetuneCents
-                ) {
-                  // val is a number from the slider, so it's safe to assign
-                  newTargetDetuneCents[baseNote] = val as number;
-                }
-
-                // Update state
-                setDetuneCents(newDetuneCents);
-                setTargetDetuneCents(newTargetDetuneCents);
-
-                // Reset flag after a short delay to ensure the update has been processed
-                setTimeout(() => {
-                  setIsSliderAdjustment(false);
-                }, 50);
-              }}
-            />
-          </div>
-        ))}
+          )
+        )}
       </div>
       <footer className="mt-8 py-4 border-t w-full text-center text-gray-600">
         <div className="flex justify-center items-center gap-2 mb-2">
-          <a href="https://github.com/szabyg/clear-chord" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600">
+          <a
+            href="https://github.com/szabyg/clear-chord"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-blue-600"
+          >
             GitHub
           </a>
         </div>
